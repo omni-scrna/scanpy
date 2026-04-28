@@ -118,6 +118,20 @@ def run_pca(X, gene_ids, cell_ids, args):
 
     # TODO: move the options dictionary up in the module (it's a constant)
     solver = {"scanpy_arpack": "arpack", "scanpy_randomized": "randomized"}[args.pca_type]
+
+    # TODO: accept chunked argument too, to cap memory usage (triggers
+    # incremental PCA approach -- maybe pass it as pca_type and enforce
+    # chunked.
+    # A larger chunk_size improves numerical stability and speed (up to a
+    # point) but increases the memory ceiling.
+    # Chunked mode is most effective when paired with backed mode (e.g., adata
+    # = sc.read_h5ad('file.h5ad', backed='r')). If the AnnData object is
+    # already fully loaded into memory, using chunked=True provides no memory
+    # benefit and will simply slow down the computation.
+    # IncrementalPCA in scikit-learn traditionally prefers dense inputs. If
+    # your data is sparse, Scanpy may need to densify each chunk during the
+    # partial_fit step, which can cause local spikes in memory usage.
+
     sc.pp.pca(
         adata,
         n_comps=args.n_components,
@@ -135,10 +149,12 @@ def run_pca(X, gene_ids, cell_ids, args):
 
 def write_output(path, embedding, loadings, variance, variance_ratio,
                  cell_ids, gene_ids, args):
-    import anndata
-    import scanpy
+    from importlib.metadata import version
 
     str_dtype = h5py.string_dtype(encoding="utf-8")
+
+    # TODO: factor out the output writing
+
     with h5py.File(path, "w") as h5:
         h5.create_dataset("embedding", data=embedding)
         h5.create_dataset("loadings", data=loadings)
@@ -151,8 +167,8 @@ def write_output(path, embedding, loadings, variance, variance_ratio,
         h5.attrs["pca_type"] = args.pca_type
         h5.attrs["n_components"] = args.n_components
         h5.attrs["random_seed"] = args.random_seed
-        h5.attrs["scanpy_version"] = scanpy.__version__
-        h5.attrs["anndata_version"] = anndata.__version__
+        h5.attrs["scanpy_version"] = version("scanpy")
+        h5.attrs["anndata_version"] = version("anndata")
 
 
 def main():
@@ -172,9 +188,6 @@ def main():
 
     embedding, loadings, variance, variance_ratio = run_pca(X, gene_ids, cell_ids, args)
     print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
-
-    # TODO: I think this will need ob changes (no way to control the args.name
-    # in the output path??)
 
     out = Path(args.output_dir) / f"{args.name}_pca.h5"
     write_output(out, embedding, loadings, variance, variance_ratio,
