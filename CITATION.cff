@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this module in your publication, please cite as below."
+type: software
+title: "Scanpy"
+abstract: |
+  A multi-stage wrapper for scanpy pipelines
+authors:
+  - family-names: "ben"
+    given-names: ""
+    email: "ben.uzh@proton.me"
+date-released: "2026-04-28"
+version: "1.0.0"
+license: MIT
+url: "https://github.com/CHANGE_ME/scanpy"
+repository-code: "https://github.com/CHANGE_ME/scanpy"
+keywords:
+  - bioinformatics
+  - computational-biology
+  - benchmark
+  - omnibenchmark
+  - module
+references:
+  - title: "Original implementation"
+    authors:
+      - family-names: "ben"
+        given-names: ""
+    type: software
+    url: "https://github.com/CHANGE_ME/scanpy"
