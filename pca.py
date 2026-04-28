@@ -52,6 +52,12 @@ from cli import build_pca_parser  # noqa: E402
 
 OUTPUT_FORMAT_VERSION = "1"
 
+SOLVER = {"scanpy_arpack": "arpack", "scanpy_randomized": "randomized"}
+
+
+def _decode(arr):
+    return np.array([x.decode() if isinstance(x, bytes) else x for x in arr])
+
 
 def load_selected_genes(path):
     import gzip
@@ -64,9 +70,6 @@ def load_subset_matrix(h5_path, selected_genes):
     """Load TENx HDF5 (genes x cells) and subset to selected_genes.
 
     Returns (X_csr_cells_x_genes, gene_ids, cell_ids).
-
-    TODO: lift this into a dedicated upstream subset stage so PCA / UMAP /
-    clustering modules across Py/R/Jl don't each re-implement it.
     """
     with h5py.File(h5_path, "r") as h5:
         g = h5["matrix"]
@@ -83,11 +86,10 @@ def load_subset_matrix(h5_path, selected_genes):
         cell_ids = g["barcodes"][:] if "barcodes" in g else \
             np.array([f"cell_{i}".encode() for i in range(shape[1])])
 
-    # TODO: factor out as lambda
-    gene_ids = np.array([x.decode() if isinstance(x, bytes) else x for x in gene_ids])
-    cell_ids = np.array([x.decode() if isinstance(x, bytes) else x for x in cell_ids])
+    gene_ids = _decode(gene_ids)
+    cell_ids = _decode(cell_ids)
 
-    # TODO: document why cwc_matrix
+    # TENx HDF5 stores data in CSC order (indptr = column pointers).
     m = sp.csc_matrix((data, indices, indptr), shape=shape)
 
     sel_set = set(selected_genes)
@@ -116,8 +118,7 @@ def run_pca(X, gene_ids, cell_ids, args):
 
     sc.pp.scale(adata, zero_center=True, max_value=None)
 
-    # TODO: move the options dictionary up in the module (it's a constant)
-    solver = {"scanpy_arpack": "arpack", "scanpy_randomized": "randomized"}[args.pca_type]
+    solver = SOLVER[args.pca_type]
 
     # TODO: accept chunked argument too, to cap memory usage (triggers
     # incremental PCA approach -- maybe pass it as pca_type and enforce
@@ -152,8 +153,6 @@ def write_output(path, embedding, loadings, variance, variance_ratio,
     from importlib.metadata import version
 
     str_dtype = h5py.string_dtype(encoding="utf-8")
-
-    # TODO: factor out the output writing
 
     with h5py.File(path, "w") as h5:
         h5.create_dataset("embedding", data=embedding)
