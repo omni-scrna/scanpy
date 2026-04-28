@@ -11,8 +11,8 @@ authors:
 date-released: "2026-04-28"
 version: "1.0.0"
 license: MIT
-url: "https://github.com/CHANGE_ME/scanpy"
-repository-code: "https://github.com/CHANGE_ME/scanpy"
+url: "https://github.com/omni-scrna/scanpy"
+repository-code: "https://github.com/omni-scrna/scanpy"
 keywords:
   - bioinformatics
   - computational-biology
@@ -23,6 +23,6 @@ references:
   - title: "Original implementation"
     authors:
       - family-names: "ben"
-        given-names: ""
+        given-names: "carrillo"
     type: software
-    url: "https://github.com/CHANGE_ME/scanpy"
+    url: "https://github.com/omni-scrna/scanpy"
