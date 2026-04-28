@@ -1,4 +1,4 @@
 # OmniBenchmark Module Configuration
 
 entrypoints:
-  default: run.py
+  pca: pca.py
