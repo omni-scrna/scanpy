@@ -4,7 +4,7 @@ PCA module (scanpy-backed) for omnibenchmark.
 
 Output format (neutral HDF5, version 1)
 ---------------------------------------
-File: {output_dir}/{name}_pca.h5
+File: {output_dir}/{name}_{pca_type}_n_{n_components}.h5
 
 Datasets:
   /embedding       float64, shape (n_cells, n_components)
@@ -188,7 +188,7 @@ def main():
     embedding, loadings, variance, variance_ratio = run_pca(X, gene_ids, cell_ids, args)
     print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
 
-    out = Path(args.output_dir) / f"{args.name}_pca.h5"
+    out = Path(args.output_dir) / f"{args.name}_{args.pca_type}_n_{args.n_components}.h5"
     write_output(out, embedding, loadings, variance, variance_ratio,
                  cell_ids, gene_ids, args)
     print(f"  wrote: {out}")
