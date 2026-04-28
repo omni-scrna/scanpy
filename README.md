@@ -1,41 +1,50 @@
 # Scanpy
 
-A multi-stage wrapper for scanpy pipelines
+Scanpy-backed PCA module for omnibenchmark scRNA pipelines.
 
-**Generated with [OmniBenchmark](https://omnibenchmark.org) v0.5.0.post3+gfc4fc6c54**
+## Setup
 
-## Quick Start
-
-### Prerequisites
-
-
-
-### Installation
-
-Clone this repository:
-```bash
-git clone https://github.com/CHANGE_ME/scanpy.git
-cd scanpy
+```sh
+pixi install
+pixi run check
 ```
 
+`pixi run check` imports all runtime dependencies and prints `OK`. Run it after install to confirm the environment is healthy.
 
+## Usage
 
-### Usage
+### PCA
 
-Run the module:
-
-```bash
-./run.py
+```sh
+pixi run python pca.py \
+  --output_dir <dir> \
+  --name <name> \
+  --normalized.h5 <normalized.h5> \
+  --selected.genes <selected.genes.gz> \
+  --pca_type <scanpy_arpack|scanpy_randomized> \
+  --n_components <int> \
+  --random_seed <int>
 ```
+
+Output: `<output_dir>/<name>_pca.h5` — see [`docs/pca_output.md`](docs/pca_output.md) for the full format spec.
+
+#### Validation
+
+
+```sh
+pixi run validate <output_dir>/<name>_pca.h5
+```
+
+Exit codes: `0` = valid, `1` = validation failure, `2` = IO / usage error.
+
+## Conda environment export
+
+```sh
+pixi run export-env
+```
+
+Exports the resolved environment to `envs/scanpy.yml`. The environment is named after the repo root folder.
 
 ## Citation
 
 If you use this module in your research, please cite it using the information in `CITATION.cff`.
-
-## License
-
-This project is licensed under the MIT License - see the `CITATION.cff` file for details.
-
----
-
-**Note**: Remember to update the GitHub URL (`CHANGE_ME`) to point to your actual repository!
