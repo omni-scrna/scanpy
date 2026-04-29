@@ -4,7 +4,7 @@ PCA module (scanpy-backed) for omnibenchmark.
 
 Output format (neutral HDF5, version 1)
 ---------------------------------------
-File: {output_dir}/{name}_{pca_type}_n_{n_components}.h5
+File: {output_dir}/{name}_pca.h5
 
 Datasets:
   /embedding       float64, shape (n_cells, n_components)
@@ -25,8 +25,8 @@ Datasets:
                    aligned with rows of /loadings.
 
 Root attributes (provenance / params):
-  pca_type, n_components, random_seed,
-  scanpy_version, anndata_version, format_version="1"
+  tool="scanpy", tool_version, solver,
+  n_components, random_seed, format_version="1"
 
 This format is intentionally flat HDF5 (not h5ad) so R (rhdf5 / HDF5Array)
 and Julia (HDF5.jl) implementations can read/write it without anndata.
@@ -51,8 +51,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_pca_parser  # noqa: E402
 
 OUTPUT_FORMAT_VERSION = "1"
-
-SOLVER = {"scanpy_arpack": "arpack", "scanpy_randomized": "randomized"}
+TOOL = "scanpy"
 
 
 def _decode(arr):
@@ -118,8 +117,6 @@ def run_pca(X, gene_ids, cell_ids, args):
 
     sc.pp.scale(adata, zero_center=True, max_value=None)
 
-    solver = SOLVER[args.pca_type]
-
     # TODO: accept chunked argument too, to cap memory usage (triggers
     # incremental PCA approach -- maybe pass it as pca_type and enforce
     # chunked.
@@ -137,7 +134,7 @@ def run_pca(X, gene_ids, cell_ids, args):
         adata,
         n_comps=args.n_components,
         zero_center=True,
-        svd_solver=solver,
+        svd_solver=args.solver,
         random_state=args.random_seed,
     )
 
@@ -163,18 +160,18 @@ def write_output(path, embedding, loadings, variance, variance_ratio,
         h5.create_dataset("gene_ids", data=np.asarray(gene_ids, dtype=object), dtype=str_dtype)
 
         h5.attrs["format_version"] = OUTPUT_FORMAT_VERSION
-        h5.attrs["pca_type"] = args.pca_type
+        h5.attrs["tool"] = TOOL
+        h5.attrs["tool_version"] = version("scanpy")
+        h5.attrs["solver"] = args.solver
         h5.attrs["n_components"] = args.n_components
         h5.attrs["random_seed"] = args.random_seed
-        h5.attrs["scanpy_version"] = version("scanpy")
-        h5.attrs["anndata_version"] = version("anndata")
 
 
 def main():
     args = build_pca_parser().parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
     for k in ("output_dir", "name", "normalized_h5", "selected_genes",
-              "pca_type", "n_components", "random_seed"):
+              "solver", "n_components", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
@@ -188,7 +185,7 @@ def main():
     embedding, loadings, variance, variance_ratio = run_pca(X, gene_ids, cell_ids, args)
     print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
 
-    out = Path(args.output_dir) / f"{args.name}_{args.pca_type}_n_{args.n_components}.h5"
+    out = Path(args.output_dir) / f"{args.name}_pca.h5"
     write_output(out, embedding, loadings, variance, variance_ratio,
                  cell_ids, gene_ids, args)
     print(f"  wrote: {out}")

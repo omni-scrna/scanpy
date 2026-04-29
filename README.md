@@ -21,12 +21,12 @@ pixi run python pca.py \
   --name <name> \
   --normalized.h5 <normalized.h5> \
   --selected.genes <selected.genes.gz> \
-  --pca_type <scanpy_arpack|scanpy_randomized> \
+  --solver <arpack|randomized> \
   --n_components <int> \
   --random_seed <int>
 ```
 
-Output: `<output_dir>/<name>_pca.h5` — see [`docs/pca_output.md`](docs/pca_output.md) for the full format spec.
+Output: `<output_dir>/<name>_<solver>_n_<n_components>.h5` — see [`docs/pca_output.md`](docs/pca_output.md) for the full format spec.
 
 #### Validation
 

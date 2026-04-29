@@ -32,9 +32,9 @@ def build_pca_parser():
                         type=str, required=True,
                         help="Gzipped text file of selected gene ids (one per line)")
 
-    parser.add_argument("--pca_type", type=str, required=True,
-                        choices=["scanpy_arpack", "scanpy_randomized"],
-                        help="PCA solver / implementation")
+    parser.add_argument("--solver", type=str, required=True,
+                        choices=["arpack", "randomized"],
+                        help="PCA solver")
     parser.add_argument("--n_components", type=int, required=True,
                         help="Number of principal components to compute")
     parser.add_argument("--random_seed", type=int, required=True,

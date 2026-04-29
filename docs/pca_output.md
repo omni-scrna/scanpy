@@ -1,6 +1,6 @@
 # PCA output format (version 1)
 
-File: `{output_dir}/{name}_pca.h5`
+File: `{output_dir}/{name}_{solver}_n_{n_components}.h5`
 
 Flat HDF5 — intentionally not h5ad — so R (`rhdf5` / `HDF5Array`) and Julia (`HDF5.jl`) can read it without an anndata dependency.
 
@@ -22,11 +22,11 @@ Flat HDF5 — intentionally not h5ad — so R (`rhdf5` / `HDF5Array`) and Julia 
 | Attribute | Type | Description |
 |---|---|---|
 | `format_version` | string | Always `"1"` for this spec |
-| `pca_type` | string | Solver used: `scanpy_arpack` or `scanpy_randomized` |
+| `tool` | string | Producing tool: `scanpy` or `scrapper` |
+| `tool_version` | string | Version of the producing tool |
+| `solver` | string | PCA solver: `arpack`/`randomized` (scanpy) or `irlba` (scrapper) |
 | `n_components` | int | Number of PCs computed |
 | `random_seed` | int | Random seed passed to the solver |
-| `scanpy_version` | string | Scanpy version used to produce the file |
-| `anndata_version` | string | AnnData version used to produce the file |
 
 ## Preprocessing
 
@@ -68,6 +68,7 @@ with h5py.File("name_pca.h5", "r") as h5:
     variance_ratio = h5["variance_ratio"][:]
     cell_ids       = h5["cell_ids"].asstr()[:]
     gene_ids       = h5["gene_ids"].asstr()[:]
-    pca_type       = h5.attrs["pca_type"]
+    tool           = h5.attrs["tool"]
+    solver         = h5.attrs["solver"]
     n_components   = int(h5.attrs["n_components"])
 ```

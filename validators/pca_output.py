@@ -25,10 +25,13 @@ REQUIRED_DATASETS = {
     "gene_ids":        (None,      1),
 }
 
-REQUIRED_ATTRS = {"format_version", "pca_type", "n_components", "random_seed",
-                  "scanpy_version", "anndata_version"}
+REQUIRED_ATTRS = {"format_version", "tool", "tool_version", "solver",
+                  "n_components", "random_seed"}
 
-VALID_PCA_TYPES = {"scanpy_arpack", "scanpy_randomized"}
+VALID_SOLVERS_BY_TOOL = {
+    "scanpy":   {"arpack", "randomized"},
+    "scrapper": {"irlba"},
+}
 
 
 def validate(path) -> list[str]:
@@ -55,10 +58,18 @@ def validate(path) -> list[str]:
                 f"unexpected format_version: {h5.attrs['format_version']!r} (expected '1')"
             )
 
-        if "pca_type" in h5.attrs and h5.attrs["pca_type"] not in VALID_PCA_TYPES:
+        tool = h5.attrs.get("tool")
+        solver = h5.attrs.get("solver")
+        if tool is not None and tool not in VALID_SOLVERS_BY_TOOL:
             errors.append(
-                f"unknown pca_type: {h5.attrs['pca_type']!r} "
-                f"(valid: {sorted(VALID_PCA_TYPES)})"
+                f"unknown tool: {tool!r} "
+                f"(valid: {sorted(VALID_SOLVERS_BY_TOOL)})"
+            )
+        elif tool is not None and solver is not None \
+                and solver not in VALID_SOLVERS_BY_TOOL[tool]:
+            errors.append(
+                f"solver {solver!r} not valid for tool {tool!r} "
+                f"(valid: {sorted(VALID_SOLVERS_BY_TOOL[tool])})"
             )
 
         # ── datasets: existence, dtype, ndim ────────────────────────────────
@@ -152,8 +163,8 @@ def main():
             n_comps = h5["embedding"].shape[1]
             n_genes = h5["loadings"].shape[0]
             print(f"  cells={n_cells}  genes={n_genes}  components={n_comps}")
-            print(f"  pca_type={h5.attrs['pca_type']}  "
-                  f"scanpy={h5.attrs['scanpy_version']}")
+            print(f"  tool={h5.attrs['tool']} {h5.attrs['tool_version']}  "
+                  f"solver={h5.attrs['solver']}")
         sys.exit(0)
 
 
