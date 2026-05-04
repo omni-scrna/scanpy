@@ -38,3 +38,20 @@ def build_pca_parser():
                         help="Seed for randomized solvers (and for reproducibility)")
 
     return parser
+
+
+def build_knn_parser():
+    parser = argparse.ArgumentParser(description="OmniBenchmark kNN module (scanpy)")
+    add_common_args(parser)
+
+    parser.add_argument("--pca.h5", dest="pca_h5", type=str, required=True,
+                        help="PCA output HDF5 produced by the pca entrypoint")
+    parser.add_argument("--n_neighbors", type=int, required=True,
+                        help="Number of nearest neighbors")
+    parser.add_argument("--flavor", type=str, required=True,
+                        choices=["umap", "gauss"],
+                        help="Method to compute connectivities")
+    parser.add_argument("--random_seed", type=int, required=True,
+                        help="Random seed")
+
+    return parser
