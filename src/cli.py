@@ -25,12 +25,9 @@ def build_pca_parser():
     parser = argparse.ArgumentParser(description="OmniBenchmark PCA module (scanpy)")
     add_common_args(parser)
 
-    parser.add_argument("--normalized.h5", dest="normalized_h5",
+    parser.add_argument("--normalized_selected.h5", dest="input_h5",
                         type=str, required=True,
-                        help="TENx-format HDF5 of normalized expression (genes x cells)")
-    parser.add_argument("--selected.genes", dest="selected_genes",
-                        type=str, required=True,
-                        help="Gzipped text file of selected gene ids (one per line)")
+                        help="TENx-format HDF5 of normalized, selected expression (genes x cells)")
 
     parser.add_argument("--solver", type=str, required=True,
                         choices=["arpack", "randomized"],
