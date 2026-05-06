@@ -44,8 +44,8 @@ def build_knn_parser():
     parser = argparse.ArgumentParser(description="OmniBenchmark kNN module (scanpy)")
     add_common_args(parser)
 
-    parser.add_argument("--pca.h5", dest="pca_h5", type=str, required=True,
-                        help="PCA output HDF5 produced by the pca entrypoint")
+    parser.add_argument("--pca.tsv", dest="pca_tsv", type=str, required=True,
+                        help="PCA embedding TSV produced by the pca entrypoint")
     parser.add_argument("--n_neighbors", type=int, required=True,
                         help="Number of nearest neighbors")
     parser.add_argument("--flavor", type=str, required=True,
