@@ -2,34 +2,14 @@
 """
 PCA module (scanpy-backed) for omnibenchmark.
 
-Output format (neutral HDF5, version 1)
----------------------------------------
-File: {output_dir}/{name}_pca.h5
+Output
+------
+File: {output_dir}/{name}_pcas.tsv
 
-Datasets:
-  /embedding       float64, shape (n_cells, n_components)
-                   PCA scores. Cells-as-rows. NOTE for R consumers:
-                   transpose with t() if you need cells-as-columns.
-                   (SingleCellExperiment reducedDim is also cells-as-rows,
-                   so usually no transpose is needed.)
-  /loadings        float64, shape (n_genes, n_components)
-                   Gene loadings (a.k.a. rotation / components). Genes-as-rows.
-  /variance        float64, shape (n_components,)
-                   Variance explained by each PC.
-  /variance_ratio  float64, shape (n_components,)
-                   Fraction of total variance explained per PC.
-  /cell_ids        utf-8 string, shape (n_cells,)
-                   Cell barcodes, aligned with rows of /embedding.
-  /gene_ids        utf-8 string, shape (n_genes,)
-                   Gene identifiers (the selected/HVG subset),
-                   aligned with rows of /loadings.
+Tab-separated, with header row:
+  cell_id  PC1  PC2  ...  PC{n_components}
 
-Root attributes (provenance / params):
-  tool="scanpy", tool_version, solver,
-  n_components, random_seed, format_version="1"
-
-This format is intentionally flat HDF5 (not h5ad) so R (rhdf5 / HDF5Array)
-and Julia (HDF5.jl) implementations can read/write it without anndata.
+One row per cell; values are float64 PCA scores.
 
 Implementation notes
 --------------------
@@ -49,9 +29,7 @@ import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_pca_parser  # noqa: E402
-
-OUTPUT_FORMAT_VERSION = "1"
-TOOL = "scanpy"
+from writers import Embedding, write_embeddings  # noqa: E402
 
 
 def load_matrix(h5_path):
@@ -102,27 +80,6 @@ def run_pca(adata, args):
     return embedding, loadings, variance, variance_ratio
 
 
-def write_output(path, embedding, loadings, variance, variance_ratio,
-                 cell_ids, gene_ids, args):
-    from importlib.metadata import version
-
-    str_dtype = h5py.string_dtype(encoding="utf-8")
-
-    with h5py.File(path, "w") as h5:
-        h5.create_dataset("embedding", data=embedding)
-        h5.create_dataset("loadings", data=loadings)
-        h5.create_dataset("variance", data=variance)
-        h5.create_dataset("variance_ratio", data=variance_ratio)
-        h5.create_dataset("cell_ids", data=np.asarray(cell_ids, dtype=object), dtype=str_dtype)
-        h5.create_dataset("gene_ids", data=np.asarray(gene_ids, dtype=object), dtype=str_dtype)
-
-        h5.attrs["format_version"] = OUTPUT_FORMAT_VERSION
-        h5.attrs["tool"] = TOOL
-        h5.attrs["tool_version"] = version("scanpy")
-        h5.attrs["solver"] = args.solver
-        h5.attrs["n_components"] = args.n_components
-        h5.attrs["random_seed"] = args.random_seed
-
 
 def main():
     args = build_pca_parser().parse_args()
@@ -140,9 +97,9 @@ def main():
     embedding, loadings, variance, variance_ratio = run_pca(adata, args)
     print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
 
-    out = Path(args.output_dir) / f"{args.name}_pca.h5"
-    write_output(out, embedding, loadings, variance, variance_ratio,
-                 cell_ids, gene_ids, args)
+    col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
+    out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
+    write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
     print(f"  wrote: {out}")
 
 

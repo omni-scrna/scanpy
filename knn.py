@@ -13,6 +13,7 @@ from pathlib import Path
 import anndata as ad
 import h5py
 import numpy as np
+import pandas as pd
 import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -34,15 +35,16 @@ def write_sparse(h5, name, m):
 def main():
     args = build_knn_parser().parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "pca_h5", "n_neighbors", "flavor", "random_seed"):
+    for k in ("output_dir", "name", "pca_tsv", "n_neighbors", "flavor", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    with h5py.File(args.pca_h5, "r") as h5:
-        embedding = h5["embedding"][:]
+    df = pd.read_table(args.pca_tsv, index_col=0)
+    embedding = df.to_numpy(dtype=np.float64)
 
     adata = ad.AnnData(X=np.zeros((embedding.shape[0], 1)))
+    adata.obs_names = df.index.tolist()
     adata.obsm["X_pca"] = embedding
 
     sc.pp.neighbors(adata, n_neighbors=args.n_neighbors, method=args.flavor,
