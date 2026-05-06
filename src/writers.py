@@ -1,9 +1,9 @@
 """Reusable writers for objects produced by this module, conforming to the omni-scrna benchmark spec."""
 
-import csv
 from dataclasses import dataclass, field
 
 import numpy as np
+import pandas as pd
 
 @dataclass
 class Embedding:
@@ -18,17 +18,11 @@ def _col_names(embedding):
     return [f"dim_{i + 1}" for i in range(embedding.matrix.shape[1])]
 
 
-def _row_iter(embedding):
-    # Header has N cols (no row-name label); data rows have N+1 cols so that
-    # read.table(f, header=TRUE) auto-promotes the first data column to row.names.
-    yield _col_names(embedding)
-    for cell_id, row in zip(embedding.row_ids, embedding.matrix):
-        yield [cell_id] + row.tolist()
-
-
 def _write_tsv(path, embedding):
-    with open(path, "w", encoding="utf-8", newline="") as f:
-        csv.writer(f, delimiter="\t", lineterminator="\n").writerows(_row_iter(embedding))
+    # index=True + no index name → header row has N cols, data rows N+1,
+    # which read.table(f, header=TRUE) auto-promotes to row.names.
+    df = pd.DataFrame(embedding.matrix, index=embedding.row_ids, columns=_col_names(embedding))
+    df.to_csv(path, sep="\t")
 
 
 def write_embeddings(obj, path, format="tsv"):
