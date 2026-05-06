@@ -19,14 +19,16 @@ def _col_names(embedding):
 
 
 def _row_iter(embedding):
-    yield ["cell_id"] + _col_names(embedding)
+    # Header has N cols (no row-name label); data rows have N+1 cols so that
+    # read.table(f, header=TRUE) auto-promotes the first data column to row.names.
+    yield _col_names(embedding)
     for cell_id, row in zip(embedding.row_ids, embedding.matrix):
         yield [cell_id] + row.tolist()
 
 
 def _write_tsv(path, embedding):
     with open(path, "w", encoding="utf-8", newline="") as f:
-        csv.writer(f, delimiter="\t").writerows(_row_iter(embedding))
+        csv.writer(f, delimiter="\t", lineterminator="\n").writerows(_row_iter(embedding))
 
 
 def write_embeddings(obj, path, format="tsv"):
