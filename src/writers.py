@@ -25,7 +25,7 @@ def _write_tsv(path, embedding):
     df = pl.from_numpy(embedding.matrix, schema=cols).insert_column(
         0, pl.Series("", embedding.row_ids))
     with open(path, "w") as f:
-        f.write("cell_id" + "\t".join(cols) + "\n")
+        f.write("cell_id\t" + "\t".join(cols) + "\n")
         df.write_csv(f, separator="\t", include_header=False)
 
 
