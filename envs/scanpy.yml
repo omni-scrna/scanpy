@@ -11,3 +11,4 @@ dependencies:
 - anndata >=0.12.11,<0.13
 - scipy >=1.17.1,<2
 - numpy >=2.4.3,<3
+- polars >=1,<2

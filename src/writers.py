@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 @dataclass
 class Embedding:
@@ -19,10 +19,14 @@ def _col_names(embedding):
 
 
 def _write_tsv(path, embedding):
-    # index=True + no index name → header row has N cols, data rows N+1,
-    # which read.table(f, header=TRUE) auto-promotes to row.names.
-    df = pd.DataFrame(embedding.matrix, index=embedding.row_ids, columns=_col_names(embedding))
-    df.to_csv(path, sep="\t")
+    # Header has N cols, data rows N+1 (row_ids unnamed first column);
+    # read.table(f, header=TRUE) auto-promotes the extra leading column to row.names.
+    cols = _col_names(embedding)
+    df = pl.from_numpy(embedding.matrix, schema=cols).insert_column(
+        0, pl.Series("", embedding.row_ids))
+    with open(path, "w") as f:
+        f.write("\t".join(cols) + "\n")
+        df.write_csv(f, separator="\t", include_header=False)
 
 
 def write_embeddings(obj, path, format="tsv"):

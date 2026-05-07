@@ -13,7 +13,7 @@ from pathlib import Path
 import anndata as ad
 import h5py
 import numpy as np
-import pandas as pd
+import polars as pl
 import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -40,11 +40,12 @@ def main():
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    df = pd.read_table(args.pca_tsv, index_col=0)
-    embedding = df.to_numpy(dtype=np.float64)
+    # TSV has N header cols and N+1 data cols (first data col = row IDs, unnamed).
+    df = pl.read_csv(args.pca_tsv, separator="\t", skip_rows=1, has_header=False)
+    embedding = df[:, 1:].to_numpy().astype(np.float64)
 
     adata = ad.AnnData(X=np.zeros((embedding.shape[0], 1)))
-    adata.obs_names = df.index.tolist()
+    adata.obs_names = df[:, 0].to_list()
     adata.obsm["X_pca"] = embedding
 
     sc.pp.neighbors(adata, n_neighbors=args.n_neighbors, method=args.flavor,
