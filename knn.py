@@ -15,23 +15,14 @@ Each file layout:
 import sys
 from pathlib import Path
 
-import scipy.sparse as sp
 import anndata as ad
-import h5py
 import numpy as np
 import polars as pl
 import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_knn_parser  # noqa: E402
-
-
-def write_sparse(h5, m: sp.spmatrix, cell_ids: list[str]) -> None:
-    m = m.tocsr()
-    h5.create_dataset("cell_ids", data=np.array(cell_ids, dtype=bytes))
-    h5.create_dataset("data", data=m.data)
-    h5.create_dataset("indices", data=m.indices)
-    h5.create_dataset("indptr", data=m.indptr)
+from writers import SparseGraph, write_graph  # noqa: E402
 
 
 def main():
@@ -55,8 +46,7 @@ def main():
 
     for key in ("distances", "connectivities"):
         out = Path(args.output_dir) / f"{args.name}_{key}.h5"
-        with h5py.File(out, "w") as h5:
-            write_sparse(h5, adata.obsp[key], cell_ids)
+        write_graph(SparseGraph(matrix=adata.obsp[key], cell_ids=cell_ids), out)
 
 
 if __name__ == "__main__":

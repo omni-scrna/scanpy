@@ -3,4 +3,5 @@
 entrypoints:
   pca: pca.py
   knn: knn.py
+  cluster: cluster.py
   pca-prof: denet pca.py

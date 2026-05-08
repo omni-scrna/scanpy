@@ -80,12 +80,8 @@ def run_pca(adata, args):
     return embedding, loadings, variance, variance_ratio
 
 
-
 def main():
     args = build_pca_parser().parse_args()
-    print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed"):
-        print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 

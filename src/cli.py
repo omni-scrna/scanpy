@@ -82,3 +82,27 @@ def build_knn_parser():
     parser.add_argument("--random_seed", type=int, required=True, help="Random seed")
 
     return parser
+
+
+def build_cluster_parser():
+    parser = argparse.ArgumentParser(
+        description="OmniBenchmark clustering module (scanpy)"
+    )
+    add_common_args(parser)
+
+    parser.add_argument(
+        "--connectivities.h5",
+        dest="connectivities",
+        type=str,
+        required=True,
+        help="HDF5 file with UMAP connectivities matrix (CSR: cell_ids, data, indices, indptr)",
+    )
+    parser.add_argument(
+        "--resolution",
+        type=float,
+        required=True,
+        help="Resolution parameter controlling cluster granularity",
+    )
+    parser.add_argument("--random_seed", type=int, required=True, help="Random seed")
+
+    return parser
