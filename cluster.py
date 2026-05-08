@@ -35,9 +35,10 @@ def main():
 
     out = Path(args.output_dir) / f"{args.name}_clusters.tsv"
     write_clustering(
-        Clustering(cell_ids=graph.cell_ids, labels=adata.obs[cluster_col].values), out
+        Clustering(cell_ids=graph.cell_ids, labels=adata.obs["leiden"]),
+        out,
     )
 
 
-if __name__ == "__main__c":
+if __name__ == "__main__":
     main()
