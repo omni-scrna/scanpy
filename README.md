@@ -37,6 +37,14 @@ pixi run validate <output_dir>/<name>_pca.h5
 
 Exit codes: `0` = valid, `1` = validation failure, `2` = IO / usage error.
 
+## Tests
+
+```sh
+pixi run test
+```
+
+Runs the pytest suite under `tests/`.
+
 ## Conda environment export
 
 ```sh
