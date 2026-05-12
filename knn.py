@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """kNN graph module (scanpy-backed) for omnibenchmark.
 
-Outputs two HDF5 files per run:
-  {name}_distances.h5      — KNN distance matrix (sparse CSR)
-  {name}_connectivities.h5 — UMAP connectivities matrix (sparse CSR)
+Outputs a single HDF5 file per run:
+  {output_dir}/{name}_neighbors.h5 — KNN distances + UMAP connectivities sharing one cell_ids list.
 
-Each file layout:
-  /cell_ids  string array (n_cells,)
-  /data      float64 array (nnz,)
-  /indices   int32 array (nnz,)
-  /indptr    int32 array (n_cells+1,)
+File layout:
+  /cell_ids                  string array (n_cells,)
+  /distances/{data,indices,indptr}       sparse CSR (n_cells, n_cells)
+  /connectivities/{data,indices,indptr}  sparse CSR (n_cells, n_cells)
 """
 
 import sys
@@ -22,7 +20,27 @@ import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_knn_parser  # noqa: E402
-from writers import SparseGraph, write_graph  # noqa: E402
+from writers import Neighbors, write_neighbors  # noqa: E402
+
+
+def compute_neighbors(embedding, cell_ids, n_neighbors, flavor, random_seed):
+    """Run scanpy's neighbors on an embedding and return a Neighbors object."""
+    adata = ad.AnnData(X=np.zeros((embedding.shape[0], 1)))
+    adata.obs_names = cell_ids
+    adata.obsm["X_pca"] = embedding
+
+    sc.pp.neighbors(
+        adata,
+        n_neighbors=n_neighbors,
+        method=flavor,
+        use_rep="X_pca",
+        random_state=random_seed,
+    )
+    return Neighbors(
+        cell_ids=cell_ids,
+        distances=adata.obsp["distances"],
+        connectivities=adata.obsp["connectivities"],
+    )
 
 
 def main():
@@ -32,21 +50,16 @@ def main():
     cell_ids = df["cell_id"].to_list()
     embedding = df.drop("cell_id").to_numpy().astype(np.float64)
 
-    adata = ad.AnnData(X=np.zeros((embedding.shape[0], 1)))
-    adata.obs_names = cell_ids
-    adata.obsm["X_pca"] = embedding
-
-    sc.pp.neighbors(
-        adata,
+    nbrs = compute_neighbors(
+        embedding,
+        cell_ids,
         n_neighbors=args.n_neighbors,
-        method=args.flavor,
-        use_rep="X_pca",
-        random_state=args.random_seed,
+        flavor=args.flavor,
+        random_seed=args.random_seed,
     )
 
-    for key in ("distances", "connectivities"):
-        out = Path(args.output_dir) / f"{args.name}_{key}.h5"
-        write_graph(SparseGraph(matrix=adata.obsp[key], cell_ids=cell_ids), out)
+    out = Path(args.output_dir) / f"{args.name}_neighbors.h5"
+    write_neighbors(nbrs, out)
 
 
 if __name__ == "__main__":

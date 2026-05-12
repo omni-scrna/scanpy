@@ -6,54 +6,54 @@ import pytest
 import scipy.sparse as sp
 
 from cluster import cluster_leiden
-from readers import read_graph_as_anndata
-from writers import SparseGraph, write_clustering, write_graph, Clustering
+from readers import read_neighbors_as_anndata
+from writers import Clustering, Neighbors, write_clustering, write_neighbors
 
 
-def _two_blobs_graph(n_per_block=8):
-    """Build a connectivities matrix with two well-separated cliques."""
+def _two_blobs_csr(n_per_block=8):
     n = 2 * n_per_block
     a = np.ones((n_per_block, n_per_block))
     block = np.block([[a, np.zeros_like(a)], [np.zeros_like(a), a]])
     np.fill_diagonal(block, 0)
-    ids = [f"c{i}" for i in range(n)]
-    return SparseGraph(matrix=sp.csr_matrix(block), cell_ids=ids)
+    return sp.csr_matrix(block), [f"c{i}" for i in range(n)]
 
 
 @pytest.fixture
-def graph_h5(tmp_path):
-    g = _two_blobs_graph()
-    p = tmp_path / "graph.h5"
-    write_graph(g, p)
-    return p, g
+def neighbors_h5(tmp_path):
+    mat, ids = _two_blobs_csr()
+    nbrs = Neighbors(cell_ids=ids, distances=mat.copy(), connectivities=mat.copy())
+    p = tmp_path / "neighbors.h5"
+    write_neighbors(nbrs, p)
+    return p, nbrs
 
 
-def test_read_graph_as_anndata_shape(graph_h5):
-    path, g = graph_h5
-    adata, cell_ids = read_graph_as_anndata(path)
-    assert cell_ids == g.cell_ids
-    assert adata.n_obs == len(g.cell_ids)
+def test_read_neighbors_as_anndata_shape(neighbors_h5):
+    path, nbrs = neighbors_h5
+    adata, cell_ids = read_neighbors_as_anndata(path)
+    assert cell_ids == nbrs.cell_ids
+    assert adata.n_obs == len(nbrs.cell_ids)
+    assert "distances" in adata.obsp
     assert "connectivities" in adata.obsp
     assert adata.uns["neighbors"]["connectivities_key"] == "connectivities"
 
 
-def test_cluster_leiden_separates_blocks(graph_h5):
-    path, g = graph_h5
-    adata, _ = read_graph_as_anndata(path)
+def test_cluster_leiden_separates_blocks(neighbors_h5):
+    path, nbrs = neighbors_h5
+    adata, _ = read_neighbors_as_anndata(path)
     labels = cluster_leiden(adata, resolution=1.0, random_seed=0)
 
-    assert len(labels) == len(g.cell_ids)
-    n = len(g.cell_ids) // 2
+    assert len(labels) == len(nbrs.cell_ids)
+    n = len(nbrs.cell_ids) // 2
     block_a = set(labels[:n])
     block_b = set(labels[n:])
     assert len(block_a) == 1 and len(block_b) == 1
     assert block_a != block_b
 
 
-def test_cluster_leiden_deterministic(graph_h5):
-    path, _ = graph_h5
-    adata1, _ = read_graph_as_anndata(path)
-    adata2, _ = read_graph_as_anndata(path)
+def test_cluster_leiden_deterministic(neighbors_h5):
+    path, _ = neighbors_h5
+    adata1, _ = read_neighbors_as_anndata(path)
+    adata2, _ = read_neighbors_as_anndata(path)
     l1 = list(cluster_leiden(adata1, random_seed=42))
     l2 = list(cluster_leiden(adata2, random_seed=42))
     assert l1 == l2

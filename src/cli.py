@@ -91,11 +91,11 @@ def build_cluster_parser():
     add_common_args(parser)
 
     parser.add_argument(
-        "--connectivities.h5",
-        dest="connectivities",
+        "--neighbors.h5",
+        dest="neighbors",
         type=str,
         required=True,
-        help="HDF5 file with UMAP connectivities matrix (CSR: cell_ids, data, indices, indptr)",
+        help="HDF5 file produced by the knn entrypoint (cell_ids + distances + connectivities groups)",
     )
     parser.add_argument(
         "--resolution",
