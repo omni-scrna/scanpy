@@ -21,32 +21,13 @@ Implementation notes
 import sys
 from pathlib import Path
 
-import anndata as ad
-import h5py
 import numpy as np
 import scanpy as sc
-import scipy.sparse as sp
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_pca_parser  # noqa: E402
+from readers import read_tenx_h5  # noqa: E402
 from schemas import Embedding  # noqa: E402
-
-
-def load_matrix(h5_path):
-    with h5py.File(h5_path, "r") as h5:
-        g = h5["matrix"]
-        data = g["data"][:]
-        indices = g["indices"][:]
-        indptr = g["indptr"][:]
-        shape = tuple(g["shape"][:])
-        gene_ids = g["genes"][:].astype(str)
-        cell_ids = g["barcodes"][:].astype(str)
-
-    X = sp.csc_matrix((data, indices, indptr), shape=shape).T.tocsr()  # cells x genes
-    adata = ad.AnnData(X=X)
-    adata.obs_names = cell_ids
-    adata.var_names = gene_ids
-    return adata
 
 
 def run_pca(adata, args):
@@ -85,7 +66,7 @@ def main():
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    adata = load_matrix(args.input_h5)
+    adata = read_tenx_h5(args.input_h5)
     cell_ids = np.array(adata.obs_names)
     print(f"  matrix (cells x genes): {adata.shape}")
 
