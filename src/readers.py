@@ -35,11 +35,11 @@ def read_tenx_h5(path: str | Path) -> ad.AnnData:
 
 
 def read_neighbors_as_anndata(
-    path: str | Path, format: str = "h5"
+    path: str | Path,
 ) -> tuple[ad.AnnData, list[str]]:
     """Load a Neighbors bundle and wrap it in an AnnData ready for scanpy graph algos."""
-    nbrs = Neighbors.read(path, format=format)
-    adata = ad.AnnData(obs=pd.DataFrame(index=nbrs.cell_ids))
+    nbrs = Neighbors.read(path)
+    adata = ad.AnnData(obs=pd.DataFrame(index=pd.Index(nbrs.cell_ids)))
     adata.obsp["distances"] = nbrs.distances
     adata.obsp["connectivities"] = nbrs.connectivities
     adata.uns["neighbors"] = {

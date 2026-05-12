@@ -1,21 +1,24 @@
 """Data schemas exchanged between omni-scrna scanpy stages.
 
-Each dataclass carries its own ``read`` / ``write`` methods, dispatched on a
-``format`` string. The on-disk layout for each (schema, format) pair is
-documented on the corresponding ``_read_<format>`` / ``_write_<format>``.
+Each dataclass owns its on-disk layout via ``read`` / ``write`` methods.
+Layouts are documented on the methods themselves.
+
+TODO: if/when a second format is added per schema, reintroduce a
+``format=`` parameter (or a small dispatch mixin) — see git history.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import ClassVar
+from pathlib import Path
 
 import h5py
 import numpy as np
 import polars as pl
 import scipy.sparse as sp
 
-from _format import FormatDispatch, PathLike
+PathLike = str | Path
+
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -42,22 +45,14 @@ def _decode_cell_ids(dataset: h5py.Dataset) -> list[str]:
 
 
 @dataclass
-class Embedding(FormatDispatch):
+class Embedding:
     matrix: np.ndarray  # shape (n_cells, n_dims)
     row_ids: list[str]  # cell barcodes, length n_cells
     col_names: list[str] = field(default_factory=list)  # dim labels; auto if empty
 
-    DEFAULT_FORMAT: ClassVar[str] = "tsv"
-
-    # TODO: can this be simplified?
-    def _resolved_col_names(self) -> list[str]:
-        return self.col_names or [
-            f"dim_{i + 1}" for i in range(self.matrix.shape[1])
-        ]
-
-    def _write_tsv(self, path: PathLike) -> None:
+    def write(self, path: PathLike) -> None:
         """tsv layout: header ``cell_id<TAB>dim_1<TAB>...``; one row per cell."""
-        cols = self._resolved_col_names()
+        cols = self.col_names or [f"dim_{i + 1}" for i in range(self.matrix.shape[1])]
         df = pl.from_numpy(self.matrix, schema=cols).insert_column(
             0, pl.Series("", self.row_ids)
         )
@@ -66,7 +61,7 @@ class Embedding(FormatDispatch):
             df.write_csv(f, separator="\t", include_header=False)
 
     @classmethod
-    def _read_tsv(cls, path: PathLike) -> Embedding:
+    def read(cls, path: PathLike) -> Embedding:
         df = pl.read_csv(path, separator="\t")
         return cls(
             matrix=df.drop("cell_id").to_numpy().astype(np.float64),
@@ -79,20 +74,18 @@ class Embedding(FormatDispatch):
 
 
 @dataclass
-class SparseGraph(FormatDispatch):
+class SparseGraph:
     matrix: sp.csr_matrix  # square (n_cells, n_cells)
     cell_ids: list[str]
 
-    DEFAULT_FORMAT: ClassVar[str] = "h5"
-
-    def _write_h5(self, path: PathLike) -> None:
+    def write(self, path: PathLike) -> None:
         """h5 layout: /cell_ids + flat CSR (/data, /indices, /indptr)."""
         with h5py.File(path, "w") as h5:
             h5.create_dataset("cell_ids", data=np.array(self.cell_ids, dtype=bytes))
             _write_csr_group(h5, self.matrix)
 
     @classmethod
-    def _read_h5(cls, path: PathLike) -> SparseGraph:
+    def read(cls, path: PathLike) -> SparseGraph:
         with h5py.File(path, "r") as h5:
             cell_ids = _decode_cell_ids(h5["cell_ids"])
             mat = _read_csr_group(h5, len(cell_ids))
@@ -103,14 +96,12 @@ class SparseGraph(FormatDispatch):
 
 
 @dataclass
-class Neighbors(FormatDispatch):
+class Neighbors:
     cell_ids: list[str]
     distances: sp.csr_matrix  # square (n_cells, n_cells)
     connectivities: sp.csr_matrix  # square (n_cells, n_cells)
 
-    DEFAULT_FORMAT: ClassVar[str] = "h5"
-
-    def _write_h5(self, path: PathLike) -> None:
+    def write(self, path: PathLike) -> None:
         """h5 layout: /cell_ids + /distances/{data,indices,indptr} + /connectivities/{...}."""
         with h5py.File(path, "w") as h5:
             h5.create_dataset("cell_ids", data=np.array(self.cell_ids, dtype=bytes))
@@ -118,7 +109,7 @@ class Neighbors(FormatDispatch):
             _write_csr_group(h5.create_group("connectivities"), self.connectivities)
 
     @classmethod
-    def _read_h5(cls, path: PathLike) -> Neighbors:
+    def read(cls, path: PathLike) -> Neighbors:
         with h5py.File(path, "r") as h5:
             cell_ids = _decode_cell_ids(h5["cell_ids"])
             n = len(cell_ids)
@@ -133,20 +124,18 @@ class Neighbors(FormatDispatch):
 
 
 @dataclass
-class Clustering(FormatDispatch):
+class Clustering:
     cell_ids: list[str]
     labels: list[str]
 
-    DEFAULT_FORMAT: ClassVar[str] = "tsv"
-
-    def _write_tsv(self, path: PathLike) -> None:
+    def write(self, path: PathLike) -> None:
         """tsv layout: header ``cell_id<TAB>cluster``; one row per cell."""
         pl.DataFrame(
             {"cell_id": self.cell_ids, "cluster": list(self.labels)}
         ).write_csv(path, separator="\t")
 
     @classmethod
-    def _read_tsv(cls, path: PathLike) -> Clustering:
+    def read(cls, path: PathLike) -> Clustering:
         df = pl.read_csv(path, separator="\t")
         return cls(
             cell_ids=df["cell_id"].to_list(),

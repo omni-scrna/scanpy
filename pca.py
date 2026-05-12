@@ -30,6 +30,7 @@ from readers import read_tenx_h5  # noqa: E402
 from schemas import Embedding  # noqa: E402
 
 
+# TODO: typecheck
 def run_pca(adata, args):
     sc.pp.scale(adata, zero_center=True, max_value=None)
 
@@ -43,7 +44,7 @@ def run_pca(adata, args):
     # already fully loaded into memory, using chunked=True provides no memory
     # benefit and will simply slow down the computation.
     # IncrementalPCA in scikit-learn traditionally prefers dense inputs. If
-    # your data is sparse, Scanpy may need to densify each chunk during the
+    # the data is sparse, Scanpy may need to densify each chunk during the
     # partial_fit step, which can cause local spikes in memory usage.
 
     sc.pp.pca(
