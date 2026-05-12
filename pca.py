@@ -18,9 +18,11 @@ Implementation notes
   variant rather than as an independent flag.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
+import anndata as ad
 import numpy as np
 import scanpy as sc
 
@@ -30,8 +32,7 @@ from readers import read_tenx_h5  # noqa: E402
 from schemas import Embedding  # noqa: E402
 
 
-# TODO: typecheck
-def run_pca(adata, args):
+def run_pca(adata: ad.AnnData, args: argparse.Namespace) -> Embedding:
     sc.pp.scale(adata, zero_center=True, max_value=None)
 
     # TODO: accept chunked argument too, to cap memory usage (triggers
@@ -55,28 +56,27 @@ def run_pca(adata, args):
         random_state=args.random_seed,
     )
 
-    embedding = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
-    loadings = np.asarray(adata.varm["PCs"], dtype=np.float64)
-    variance = np.asarray(adata.uns["pca"]["variance"], dtype=np.float64)
-    variance_ratio = np.asarray(adata.uns["pca"]["variance_ratio"], dtype=np.float64)
-    return embedding, loadings, variance, variance_ratio
+    matrix = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
+    return Embedding(
+        matrix=matrix,
+        row_ids=list(adata.obs_names),
+        col_names=[f"PC{i + 1}" for i in range(matrix.shape[1])],
+    )
 
 
-def main():
+def main() -> None:
     args = build_pca_parser().parse_args()
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     adata = read_tenx_h5(args.input_h5)
-    cell_ids = np.array(adata.obs_names)
     print(f"  matrix (cells x genes): {adata.shape}")
 
-    embedding, loadings, variance, variance_ratio = run_pca(adata, args)
-    print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
+    emb = run_pca(adata, args)
+    print(f"  embedding: {emb.matrix.shape}")
 
-    col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
     out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
-    Embedding(embedding, list(cell_ids), col_names).write(out)
+    emb.write(out)
     print(f"  wrote: {out}")
 
 
