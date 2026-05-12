@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 100
+extend-exclude = [".pixi", "envs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.per-file-ignores]
+"pca.py" = ["E402"]
+"knn.py" = ["E402"]
+"cluster.py" = ["E402"]
+"check.py" = ["E402"]
+
+[tool.ty.environment]
+python-version = "3.14"
+extra-paths = ["src"]
+
+[tool.ty.src]
+include = ["src", "pca.py", "knn.py", "cluster.py"]
+exclude = [".pixi", "envs", "tests"]
+
+[tool.ty.rules]
+# scanpy/anndata/h5py/leidenalg ship without first-party stubs
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"

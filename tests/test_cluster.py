@@ -7,7 +7,7 @@ import scipy.sparse as sp
 
 from cluster import cluster_leiden
 from readers import read_neighbors_as_anndata
-from writers import Clustering, Neighbors, write_clustering, write_neighbors
+from schemas import Clustering, Neighbors
 
 
 def _two_blobs_csr(n_per_block=8):
@@ -23,7 +23,7 @@ def neighbors_h5(tmp_path):
     mat, ids = _two_blobs_csr()
     nbrs = Neighbors(cell_ids=ids, distances=mat.copy(), connectivities=mat.copy())
     p = tmp_path / "neighbors.h5"
-    write_neighbors(nbrs, p)
+    nbrs.write(p)
     return p, nbrs
 
 
@@ -61,7 +61,7 @@ def test_cluster_leiden_deterministic(neighbors_h5):
 
 def test_write_clustering_tsv(tmp_path):
     out = tmp_path / "clusters.tsv"
-    write_clustering(Clustering(cell_ids=["a", "b", "c"], labels=["0", "0", "1"]), out)
+    Clustering(cell_ids=["a", "b", "c"], labels=["0", "0", "1"]).write(out)
     df = pl.read_csv(out, separator="\t")
     assert df.columns == ["cell_id", "cluster"]
     assert df["cell_id"].to_list() == ["a", "b", "c"]

@@ -1,29 +1,40 @@
 #!/usr/bin/env python3
 """kNN graph module (scanpy-backed) for omnibenchmark.
 
+Input:
+  --pcas.tsv — PCA embedding TSV (produced by ``pca.py``)
+    header: cell_id<TAB>dim_1<TAB>...<TAB>dim_n
+    body:   one row per cell; numeric columns parsed as float64.
+
 Outputs a single HDF5 file per run:
   {output_dir}/{name}_neighbors.h5 — KNN distances + UMAP connectivities sharing one cell_ids list.
 
 File layout:
-  /cell_ids                  string array (n_cells,)
+  /cell_ids                              string array (n_cells,)
   /distances/{data,indices,indptr}       sparse CSR (n_cells, n_cells)
   /connectivities/{data,indices,indptr}  sparse CSR (n_cells, n_cells)
 """
 
 import sys
 from pathlib import Path
+from typing import Literal
 
 import anndata as ad
 import numpy as np
-import polars as pl
 import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_knn_parser  # noqa: E402
-from writers import Neighbors, write_neighbors  # noqa: E402
+from schemas import Embedding, Neighbors  # noqa: E402
 
 
-def compute_neighbors(embedding, cell_ids, n_neighbors, flavor, random_seed):
+def compute_neighbors(
+    embedding: np.ndarray,
+    cell_ids: list[str],
+    n_neighbors: int,
+    flavor: Literal["umap", "gauss"],
+    random_seed: int,
+) -> Neighbors:
     """Run scanpy's neighbors on an embedding and return a Neighbors object."""
     adata = ad.AnnData(X=np.zeros((embedding.shape[0], 1)))
     adata.obs_names = cell_ids
@@ -43,23 +54,20 @@ def compute_neighbors(embedding, cell_ids, n_neighbors, flavor, random_seed):
     )
 
 
-def main():
+def main() -> None:
     args = build_knn_parser().parse_args()
 
-    df = pl.read_csv(args.pcas, separator="\t")
-    cell_ids = df["cell_id"].to_list()
-    embedding = df.drop("cell_id").to_numpy().astype(np.float64)
-
+    emb = Embedding.read(args.pcas)
     nbrs = compute_neighbors(
-        embedding,
-        cell_ids,
+        emb.matrix,
+        emb.row_ids,
         n_neighbors=args.n_neighbors,
         flavor=args.flavor,
         random_seed=args.random_seed,
     )
 
     out = Path(args.output_dir) / f"{args.name}_neighbors.h5"
-    write_neighbors(nbrs, out)
+    nbrs.write(out)
 
 
 if __name__ == "__main__":

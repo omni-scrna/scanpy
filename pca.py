@@ -21,15 +21,15 @@ Implementation notes
 import sys
 from pathlib import Path
 
+import anndata as ad
 import h5py
 import numpy as np
-import scipy.sparse as sp
-import anndata as ad
 import scanpy as sc
+import scipy.sparse as sp
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_pca_parser  # noqa: E402
-from writers import Embedding, write_embeddings  # noqa: E402
+from schemas import Embedding  # noqa: E402
 
 
 def load_matrix(h5_path):
@@ -86,7 +86,6 @@ def main():
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     adata = load_matrix(args.input_h5)
-    gene_ids = np.array(adata.var_names)
     cell_ids = np.array(adata.obs_names)
     print(f"  matrix (cells x genes): {adata.shape}")
 
@@ -95,7 +94,7 @@ def main():
 
     col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
     out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
-    write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
+    Embedding(embedding, list(cell_ids), col_names).write(out)
     print(f"  wrote: {out}")
 
 

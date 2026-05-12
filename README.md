@@ -26,16 +26,7 @@ pixi run python pca.py \
   --random_seed <int>
 ```
 
-Output: `<output_dir>/<name>_<solver>_n_<n_components>.h5` — see [`docs/pca_output.md`](docs/pca_output.md) for the full format spec.
-
-#### Validation
-
-
-```sh
-pixi run validate <output_dir>/<name>_pca.h5
-```
-
-Exit codes: `0` = valid, `1` = validation failure, `2` = IO / usage error.
+Output: `<output_dir>/<name>_pcas.tsv` — TSV with header `cell_id<TAB>PC1<TAB>...<TAB>PC{n_components}`, one row per cell. See `Embedding` in `src/schemas.py` for the schema.
 
 ## Tests
 

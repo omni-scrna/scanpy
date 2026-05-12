@@ -12,15 +12,19 @@ Output:
 import sys
 from pathlib import Path
 
+import anndata as ad
+import pandas as pd
 import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_cluster_parser  # noqa: E402
 from readers import read_neighbors_as_anndata  # noqa: E402
-from writers import Clustering, write_clustering  # noqa: E402
+from schemas import Clustering  # noqa: E402
 
 
-def cluster_leiden(adata, resolution=1.0, random_seed=0):
+def cluster_leiden(
+    adata: ad.AnnData, resolution: float = 1.0, random_seed: int = 0
+) -> pd.Series:
     """Run Leiden (igraph flavor) on ``adata.obsp['connectivities']``."""
     sc.tl.leiden(
         adata,
@@ -30,10 +34,10 @@ def cluster_leiden(adata, resolution=1.0, random_seed=0):
         n_iterations=2,
         directed=False,
     )
-    return adata.obs["leiden"]
+    return pd.Series(adata.obs["leiden"])
 
 
-def main():
+def main() -> None:
     args = build_cluster_parser().parse_args()
 
     adata, cell_ids = read_neighbors_as_anndata(args.neighbors)
@@ -42,7 +46,7 @@ def main():
     )
 
     out = Path(args.output_dir) / f"{args.name}_clusters.tsv"
-    write_clustering(Clustering(cell_ids=cell_ids, labels=labels), out)
+    Clustering(cell_ids=cell_ids, labels=list(labels)).write(out)
 
 
 if __name__ == "__main__":

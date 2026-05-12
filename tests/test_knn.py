@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import scipy.sparse as sp
 
-from writers import Neighbors, read_neighbors, write_neighbors
+from schemas import Neighbors
 
 
 def _toy_neighbors():
@@ -21,8 +21,8 @@ def _toy_neighbors():
 def test_neighbors_roundtrip(tmp_path):
     nbrs = _toy_neighbors()
     p = tmp_path / "neighbors.h5"
-    write_neighbors(nbrs, p)
-    loaded = read_neighbors(p)
+    nbrs.write(p)
+    loaded = Neighbors.read(p)
 
     assert loaded.cell_ids == nbrs.cell_ids
     np.testing.assert_array_equal(loaded.distances.toarray(), nbrs.distances.toarray())
@@ -35,7 +35,7 @@ def test_neighbors_h5_layout(tmp_path):
     """cell_ids must be stored once at the top level, with both CSR groups beside it."""
     nbrs = _toy_neighbors()
     p = tmp_path / "neighbors.h5"
-    write_neighbors(nbrs, p)
+    nbrs.write(p)
 
     with h5py.File(p, "r") as h5:
         assert set(h5.keys()) == {"cell_ids", "distances", "connectivities"}
