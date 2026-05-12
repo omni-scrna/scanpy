@@ -1,69 +1,73 @@
 #!/usr/bin/env python3
 """kNN graph module (scanpy-backed) for omnibenchmark.
 
-Output HDF5: {output_dir}/{name}_knn.h5
-  /distances/data, /distances/indices, /distances/indptr, /distances/shape
-  /connectivities/data, /connectivities/indices, /connectivities/indptr, /connectivities/shape
-  attrs: format_version, tool, tool_version, n_neighbors, random_seed
+Input:
+  --pcas.tsv — PCA embedding TSV (produced by ``pca.py``)
+    header: cell_id<TAB>dim_1<TAB>...<TAB>dim_n
+    body:   one row per cell; numeric columns parsed as float64.
+
+Outputs a single HDF5 file per run:
+  {output_dir}/{name}_neighbors.h5 — KNN distances + UMAP connectivities sharing one cell_ids list.
+
+File layout:
+  /cell_ids                              string array (n_cells,)
+  /distances/{data,indices,indptr}       sparse CSR (n_cells, n_cells)
+  /connectivities/{data,indices,indptr}  sparse CSR (n_cells, n_cells)
 """
 
 import sys
 from pathlib import Path
+from typing import Literal
 
 import anndata as ad
-import h5py
 import numpy as np
-import polars as pl
 import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_knn_parser  # noqa: E402
-
-OUTPUT_FORMAT_VERSION = "1"
-TOOL = "scanpy"
+from schemas import Embedding, Neighbors  # noqa: E402
 
 
-def write_sparse(h5, name, m):
-    m = m.tocsr()
-    g = h5.create_group(name)
-    g.create_dataset("data",    data=m.data)
-    g.create_dataset("indices", data=m.indices)
-    g.create_dataset("indptr",  data=m.indptr)
-    g.create_dataset("shape",   data=np.array(m.shape))
-
-
-def main():
-    args = build_knn_parser().parse_args()
-    print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "pca_tsv", "n_neighbors", "flavor", "random_seed"):
-        print(f"  {k}: {getattr(args, k)}")
-
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-
-    # TSV has N header cols and N+1 data cols (first data col = row IDs, unnamed).
-    df = pl.read_csv(args.pca_tsv, separator="\t", skip_rows=1, has_header=False)
-    embedding = df[:, 1:].to_numpy().astype(np.float64)
-
+def compute_neighbors(
+    embedding: np.ndarray,
+    cell_ids: list[str],
+    n_neighbors: int,
+    flavor: Literal["umap", "gauss"],
+    random_seed: int,
+) -> Neighbors:
+    """Run scanpy's neighbors on an embedding and return a Neighbors object."""
     adata = ad.AnnData(X=np.zeros((embedding.shape[0], 1)))
-    adata.obs_names = df[:, 0].to_list()
+    adata.obs_names = cell_ids
     adata.obsm["X_pca"] = embedding
 
-    sc.pp.neighbors(adata, n_neighbors=args.n_neighbors, method=args.flavor,
-                    use_rep="X_pca", random_state=args.random_seed)
+    sc.pp.neighbors(
+        adata,
+        n_neighbors=n_neighbors,
+        method=flavor,
+        use_rep="X_pca",
+        random_state=random_seed,
+    )
+    return Neighbors(
+        cell_ids=cell_ids,
+        distances=adata.obsp["distances"],
+        connectivities=adata.obsp["connectivities"],
+    )
 
-    out = Path(args.output_dir) / f"{args.name}_knn.h5"
-    with h5py.File(out, "w") as h5:
-        write_sparse(h5, "distances",     adata.obsp["distances"])
-        write_sparse(h5, "connectivities", adata.obsp["connectivities"])
-        from importlib.metadata import version
-        h5.attrs["format_version"] = OUTPUT_FORMAT_VERSION
-        h5.attrs["tool"]           = TOOL
-        h5.attrs["tool_version"]   = version("scanpy")
-        h5.attrs["n_neighbors"]    = args.n_neighbors
-        h5.attrs["flavor"]         = args.flavor
-        h5.attrs["random_seed"]    = args.random_seed
 
-    print(f"  wrote: {out}")
+def main() -> None:
+    args = build_knn_parser().parse_args()
+
+    emb = Embedding.read(args.pcas)
+    nbrs = compute_neighbors(
+        emb.matrix,
+        emb.row_ids,
+        n_neighbors=args.n_neighbors,
+        flavor=args.flavor,
+        random_seed=args.random_seed,
+    )
+
+    out = Path(args.output_dir) / f"{args.name}_neighbors.h5"
+    nbrs.write(out)
 
 
 if __name__ == "__main__":

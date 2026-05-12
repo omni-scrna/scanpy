@@ -2,4 +2,10 @@
 
 entrypoints:
   pca: pca.py
+  knn: knn.py
+  cluster: cluster.py
+
+  # profiling
   pca-prof: denet pca.py
+  knn-prof: denet knn.py
+  cluster-prof: denet cluster.py
