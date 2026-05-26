@@ -13,9 +13,10 @@ One row per cell; values are float64 PCA scores.
 
 Implementation notes
 --------------------
-- Genes are always centered/scaled before PCA (sc.pp.scale, zero_center=True).
-  If alternative scaling is needed later, maybe expose it as a new --pca_type
-  variant rather than as an independent flag.
+- Genes are mean-centered (only) before PCA via sc.pp.pca(zero_center=True).
+  No per-gene variance scaling — matches scrapper/rapids-singlecell. If
+  alternative scaling is needed later, expose it as a new --pca_type variant
+  rather than as an independent flag.
 """
 
 import sys
@@ -50,8 +51,6 @@ def load_matrix(h5_path):
 
 
 def run_pca(adata, args):
-    sc.pp.scale(adata, zero_center=True, max_value=None)
-
     # Chunked mode triggers IncrementalPCA. It is most effective with backed
     # AnnData; for in-memory data it provides no memory benefit and is slower.
     # Sparse inputs get densified per chunk during partial_fit.
@@ -67,6 +66,12 @@ def run_pca(adata, args):
         chunk_size=args.chunk_size if chunked else None,
     )
 
+    embedding = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
+    loadings = np.asarray(adata.varm["PCs"], dtype=np.float64)
+    variance = np.asarray(adata.uns["pca"]["variance"], dtype=np.float64)
+    variance_ratio = np.asarray(adata.uns["pca"]["variance_ratio"], dtype=np.float64)
+    return embedding, loadings, variance, variance_ratio
+
 
 def validate_args(args):
     chunked = args.chunked == "true"
@@ -80,12 +85,6 @@ def validate_args(args):
             sys.exit("error: --chunk_size must not be set when --chunked=false")
         if args.solver is None:
             sys.exit("error: --solver is required when --chunked=false")
-
-    embedding = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
-    loadings = np.asarray(adata.varm["PCs"], dtype=np.float64)
-    variance = np.asarray(adata.uns["pca"]["variance"], dtype=np.float64)
-    variance_ratio = np.asarray(adata.uns["pca"]["variance_ratio"], dtype=np.float64)
-    return embedding, loadings, variance, variance_ratio
 
 
 
