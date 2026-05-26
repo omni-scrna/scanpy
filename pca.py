@@ -52,26 +52,34 @@ def load_matrix(h5_path):
 def run_pca(adata, args):
     sc.pp.scale(adata, zero_center=True, max_value=None)
 
-    # TODO: accept chunked argument too, to cap memory usage (triggers
-    # incremental PCA approach -- maybe pass it as pca_type and enforce
-    # chunked.
-    # A larger chunk_size improves numerical stability and speed (up to a
-    # point) but increases the memory ceiling.
-    # Chunked mode is most effective when paired with backed mode (e.g., adata
-    # = sc.read_h5ad('file.h5ad', backed='r')). If the AnnData object is
-    # already fully loaded into memory, using chunked=True provides no memory
-    # benefit and will simply slow down the computation.
-    # IncrementalPCA in scikit-learn traditionally prefers dense inputs. If
-    # your data is sparse, Scanpy may need to densify each chunk during the
-    # partial_fit step, which can cause local spikes in memory usage.
+    # Chunked mode triggers IncrementalPCA. It is most effective with backed
+    # AnnData; for in-memory data it provides no memory benefit and is slower.
+    # Sparse inputs get densified per chunk during partial_fit.
+    chunked = args.chunked == "true"
 
     sc.pp.pca(
         adata,
         n_comps=args.n_components,
         zero_center=True,
-        svd_solver=args.solver,
+        svd_solver=args.solver if not chunked else None,
         random_state=args.random_seed,
+        chunked=chunked,
+        chunk_size=args.chunk_size if chunked else None,
     )
+
+
+def validate_args(args):
+    chunked = args.chunked == "true"
+    if chunked:
+        if args.chunk_size is None:
+            sys.exit("error: --chunk_size is required when --chunked=true")
+        if args.solver is not None:
+            sys.exit("error: --solver must not be set when --chunked=true (IncrementalPCA ignores it)")
+    else:
+        if args.chunk_size is not None:
+            sys.exit("error: --chunk_size must not be set when --chunked=false")
+        if args.solver is None:
+            sys.exit("error: --solver is required when --chunked=false")
 
     embedding = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
     loadings = np.asarray(adata.varm["PCs"], dtype=np.float64)
@@ -83,8 +91,9 @@ def run_pca(adata, args):
 
 def main():
     args = build_pca_parser().parse_args()
+    validate_args(args)
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed"):
+    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed", "chunked", "chunk_size"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)

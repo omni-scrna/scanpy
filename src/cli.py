@@ -29,13 +29,18 @@ def build_pca_parser():
                         type=str, required=True,
                         help="TENx-format HDF5 of normalized, selected expression (genes x cells)")
 
-    parser.add_argument("--solver", type=str, required=True,
+    parser.add_argument("--solver", type=str, required=False, default=None,
                         choices=["arpack", "randomized"],
-                        help="PCA solver")
+                        help="PCA solver. Required when --chunked=false; must be omitted when --chunked=true (IncrementalPCA ignores it).")
     parser.add_argument("--n_components", type=int, required=True,
                         help="Number of principal components to compute")
     parser.add_argument("--random_seed", type=int, required=True,
                         help="Seed for randomized solvers (and for reproducibility)")
+    parser.add_argument("--chunked", type=str, required=True,
+                        choices=["true", "false"],
+                        help="If true, use incremental PCA (IncrementalPCA) over chunks")
+    parser.add_argument("--chunk_size", type=int, required=False, default=None,
+                        help="Chunk size for incremental PCA. Required when --chunked=true; must be omitted otherwise.")
 
     return parser
 
