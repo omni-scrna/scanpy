@@ -37,6 +37,16 @@ def build_pca_parser():
     parser.add_argument("--random_seed", type=int, required=True,
                         help="Seed for randomized solvers (and for reproducibility)")
 
+    parser.add_argument("--rawdata.h5ad", dest="rawdata_h5ad",
+                        type=str, default=None,
+                        help="AnnData h5ad (obs read for batch labels; per-batch mode only)")
+    parser.add_argument("--batch_info.yaml", dest="batch_info_yaml",
+                        type=str, default=None,
+                        help="YAML file with batch_var field (per-batch mode only)")
+    parser.add_argument("--per_batch", type=str, default="false",
+                        choices=["true", "false"],
+                        help="Compute PCA per batch (true) or globally (false)")
+
     return parser
 
 
