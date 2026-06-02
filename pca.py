@@ -31,6 +31,8 @@ import scanpy as sc
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_pca_parser  # noqa: E402
 from writers import Embedding, write_embeddings  # noqa: E402
+from phases import phase  # noqa: E402
+from obkit.logger import init_logger  # noqa: E402
 
 
 def load_matrix(h5_path):
@@ -96,18 +98,26 @@ def main():
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    init_logger(args.output_dir)
 
-    adata = load_matrix(args.input_h5)
+    with phase("load") as attrs:
+        adata = load_matrix(args.input_h5)
+        attrs["n_cells"] = adata.n_obs
+        attrs["n_genes"] = adata.n_vars
     gene_ids = np.array(adata.var_names)
     cell_ids = np.array(adata.obs_names)
     print(f"  matrix (cells x genes): {adata.shape}")
 
-    embedding, loadings, variance, variance_ratio = run_pca(adata, args)
+    with phase("pca") as attrs:
+        embedding, loadings, variance, variance_ratio = run_pca(adata, args)
+        attrs["solver"] = args.solver or "chunked"
+        attrs["n_components"] = args.n_components
     print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
 
-    col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
-    out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
-    write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
+    with phase("write"):
+        col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
+        out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
+        write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
     print(f"  wrote: {out}")
 
 
