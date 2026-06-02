@@ -11,6 +11,13 @@ Tab-separated, with header row:
 
 One row per cell; values are float64 PCA scores.
 
+File: {output_dir}/{name}_loadings.tsv
+
+Tab-separated, with header row:
+  gene  PC1  PC2  ...  PC{n_components}
+
+One row per gene; values are float64 PCA loadings.
+
 Implementation notes
 --------------------
 - Genes are always centered/scaled before PCA (sc.pp.scale, zero_center=True).
@@ -21,11 +28,10 @@ Implementation notes
 import sys
 from pathlib import Path
 
-import h5py
 import numpy as np
 import polars as pl
 import scipy.sparse as sp
-import yaml
+import h5py
 import anndata as ad
 import scanpy as sc
 
@@ -82,62 +88,10 @@ def run_pca(adata, args):
     return embedding, loadings, variance, variance_ratio
 
 
-
-def read_batch_assignments(rawdata_h5ad, batch_variable):
-    # Read batch labels from h5ad obs
-    with h5py.File(rawdata_h5ad, "r") as f:
-        cell_ids = f["obs/_index"][:].astype(str)
-        batch_data = f[f"obs/{batch_variable}"]
-        if "categories" in batch_data:
-            codes = batch_data["codes"][:]
-            categories = batch_data["categories"][:].astype(str)
-            batch = categories[codes]
-        else:
-            batch = batch_data[:].astype(str)
-    return cell_ids, batch
-
-
-def run_pca_per_batch(adata, args):
-    # compute PCA per batch, return concatenated embeddings and per-batch loadings
-    with open(args.batch_info_yaml) as f:
-        batch_info = yaml.safe_load(f)
-    batch_variable = batch_info["batch_var"]
-
-    cell_ids_all, batch_all = read_batch_assignments(args.rawdata_h5ad, batch_variable)
-    cell_ids_matrix = np.array(adata.obs_names)
-
-    idx = np.array([np.where(cell_ids_all == c)[0][0] for c in cell_ids_matrix])
-    batch_aligned = batch_all[idx]
-    batches = np.unique(batch_aligned)
-    print(f"  per-batch PCA: {len(batches)} batches ({', '.join(batches)})")
-
-    gene_names = np.array(adata.var_names)
-    embeddings_parts = []
-    loadings_dict = {}
-
-    for b in batches:
-        mask = batch_aligned == b
-        adata_batch = adata[mask].copy()
-        print(f"    batch '{b}': {adata_batch.n_obs} cells")
-
-        embedding, loadings, _, _ = run_pca(adata_batch, args)
-        col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
-
-        batch_df = pl.DataFrame({
-            "cell_id": np.array(adata_batch.obs_names).tolist(),
-            **{col: embedding[:, i].tolist() for i, col in enumerate(col_names)},
-            "batch_id": [b] * adata_batch.n_obs,
-        })
-        embeddings_parts.append(batch_df)
-        loadings_dict[b] = loadings
-
-    return pl.concat(embeddings_parts), loadings_dict, gene_names
-
-
 def main():
     args = build_pca_parser().parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed", "per_batch"):
+    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
@@ -147,28 +101,22 @@ def main():
     cell_ids = np.array(adata.obs_names)
     print(f"  matrix (cells x genes): {adata.shape}")
 
-    if args.per_batch == "true":
-        embeddings_df, loadings_dict, gene_names = run_pca_per_batch(adata, args)
+    embedding, loadings, variance, variance_ratio = run_pca(adata, args)
+    print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
 
-        out_tsv = Path(args.output_dir) / f"{args.name}_pcas_per_batch.tsv"
-        embeddings_df.write_csv(out_tsv, separator="\t")
-        print(f"  wrote: {out_tsv}")
+    col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
 
-        out_h5 = Path(args.output_dir) / f"{args.name}_loadings_per_batch.h5"
-        with h5py.File(out_h5, "w") as f:
-            f.create_dataset("gene_names", data=gene_names.astype(bytes))
-            for b, loadings in loadings_dict.items():
-                grp = f.create_group(b)
-                grp.create_dataset("loadings", data=loadings)
-        print(f"  wrote: {out_h5}")
-    else:
-        embedding, loadings, variance, variance_ratio = run_pca(adata, args)
-        print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
+    out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
+    write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
+    print(f"  wrote: {out}")
 
-        col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
-        out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
-        write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
-        print(f"  wrote: {out}")
+    out_loadings = Path(args.output_dir) / f"{args.name}_loadings.tsv"
+    loadings_df = pl.DataFrame(
+        {"gene": gene_ids.tolist()}
+        | {col: loadings[:, i].tolist() for i, col in enumerate(col_names)}
+    )
+    loadings_df.write_csv(out_loadings, separator="\t")
+    print(f"  wrote: {out_loadings}")
 
 
 if __name__ == "__main__":
