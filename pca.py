@@ -27,8 +27,9 @@ import scipy.sparse as sp
 import anndata as ad
 import scanpy as sc
 
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-from cli import build_pca_parser  # noqa: E402
+sys.path.insert(0, str(Path(__file__).parent))          # vendored `common` package
+sys.path.insert(0, str(Path(__file__).parent / "src"))  # module-local writers
+from common.cli import parse_args  # noqa: E402
 from writers import Embedding, write_embeddings  # noqa: E402
 
 
@@ -82,7 +83,7 @@ def run_pca(adata, args):
 
 
 def main():
-    args = build_pca_parser().parse_args()
+    args = parse_args("pca")
     print(f"Full command: {' '.join(sys.argv)}")
     for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")

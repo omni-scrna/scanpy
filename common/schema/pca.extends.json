@@ -1,0 +1,8 @@
+{
+  "interface": "pca",
+  "args": [
+    { "flag": "--solver", "type": "string", "choices": ["arpack", "randomized"], "help": "PCA solver" },
+    { "flag": "--n_components", "type": "integer", "help": "Number of principal components to compute" },
+    { "flag": "--random_seed", "type": "integer", "help": "Seed for randomized solvers (and for reproducibility)" }
+  ]
+}

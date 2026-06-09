@@ -16,8 +16,8 @@ import numpy as np
 import polars as pl
 import scanpy as sc
 
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-from cli import build_knn_parser  # noqa: E402
+sys.path.insert(0, str(Path(__file__).parent))  # vendored `common` package
+from common.cli import parse_args  # noqa: E402
 
 OUTPUT_FORMAT_VERSION = "1"
 TOOL = "scanpy"
@@ -33,7 +33,7 @@ def write_sparse(h5, name, m):
 
 
 def main():
-    args = build_knn_parser().parse_args()
+    args = parse_args("knn")
     print(f"Full command: {' '.join(sys.argv)}")
     for k in ("output_dir", "name", "pca_tsv", "n_neighbors", "flavor", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")
