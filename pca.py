@@ -11,6 +11,13 @@ Tab-separated, with header row:
 
 One row per cell; values are float64 PCA scores.
 
+File: {output_dir}/{name}_loadings.tsv
+
+Tab-separated, with header row:
+  gene  PC1  PC2  ...  PC{n_components}
+
+One row per gene; values are float64 PCA loadings.
+
 Implementation notes
 --------------------
 - Genes are always centered/scaled before PCA (sc.pp.scale, zero_center=True).
@@ -21,9 +28,10 @@ Implementation notes
 import sys
 from pathlib import Path
 
-import h5py
 import numpy as np
+import polars as pl
 import scipy.sparse as sp
+import h5py
 import anndata as ad
 import scanpy as sc
 
@@ -80,7 +88,6 @@ def run_pca(adata, args):
     return embedding, loadings, variance, variance_ratio
 
 
-
 def main():
     args = build_pca_parser().parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
@@ -98,9 +105,18 @@ def main():
     print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
 
     col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
+
     out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
     write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
     print(f"  wrote: {out}")
+
+    out_loadings = Path(args.output_dir) / f"{args.name}_loadings.tsv"
+    loadings_df = pl.DataFrame(
+        {"gene": gene_ids.tolist()}
+        | {col: loadings[:, i].tolist() for i, col in enumerate(col_names)}
+    )
+    loadings_df.write_csv(out_loadings, separator="\t")
+    print(f"  wrote: {out_loadings}")
 
 
 if __name__ == "__main__":
