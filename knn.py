@@ -51,7 +51,7 @@ def main():
     sc.pp.neighbors(adata, n_neighbors=args.n_neighbors, method=args.flavor,
                     use_rep="X_pca", random_state=args.random_seed)
 
-    out = Path(args.output_dir) / f"{args.name}_knn.h5"
+    out = Path(args.output_dir) / f"{args.name}_neighbors.h5"
     with h5py.File(out, "w") as h5:
         write_sparse(h5, "distances",     adata.obsp["distances"])
         write_sparse(h5, "connectivities", adata.obsp["connectivities"])
