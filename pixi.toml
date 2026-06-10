@@ -19,7 +19,7 @@ scipy = ">=1.17.1,<2"
 numpy = ">=2.4.3,<3"
 polars = ">=1,<2"
 
-# Bootstrap tooling, kept out of the (heavy) default env. `pixi run pull` vendors
+# Bootstrap tooling, kept out of the (heavy) default env. `pixi run sync` vendors
 # the shared common/ — no sibling checkout needed: it fetches pull.py from the
 # boilerplate over HTTP and runs it (pull.py is CWD-relative and only needs
 # pyyaml + git). The vendored CONTENT still comes from `boilerplate.repo`@`ref`
@@ -31,7 +31,7 @@ pyyaml = ">=6"
 curl = "*"
 
 [feature.bootstrap.tasks]
-pull = "curl -fsSL https://raw.githubusercontent.com/omni-scrna/boilerplate/main/scripts/pull.py | python -"
+sync = "curl -fsSL https://raw.githubusercontent.com/omni-scrna/boilerplate/main/scripts/pull.py | python -"
 
 [environments]
 bootstrap = { features = ["bootstrap"], no-default-feature = true }
