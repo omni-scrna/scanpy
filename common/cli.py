@@ -51,7 +51,7 @@ import argparse
 import json
 from pathlib import Path
 
-__version__ = "0.2.0"  # x-release-version — stamped from src/common/VERSION by `pixi run version`
+__version__ = "0.2.1"  # x-release-version — stamped from src/common/VERSION by `pixi run version`
 
 def _find_schema_dir() -> Path:
     # Works under both layouts: rendered `common/cli.py` (schema is a sibling)

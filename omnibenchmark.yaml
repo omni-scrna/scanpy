@@ -6,11 +6,11 @@ entrypoints:
   knn: knn.py
 
 # Shared scaffolding (CLI engine + universal _base schema) vendored under common/
-# at a pinned ref. Interim, pre-`ob`: `pixi run pull` (from this module root)
-# refreshes it. See https://github.com/omni-scrna/boilerplate.
+# from a ref. Interim, pre-`ob`: `pixi run pull` (from this module root) refreshes
+# it. See https://github.com/omni-scrna/boilerplate.
 boilerplate:
   repo: https://github.com/omni-scrna/boilerplate
-  ref: v0.2.0          # pin: tag/branch of the boilerplate to vendor from
+  ref: main            # track the tip (unpinned); common/VERSION witnesses what we carry
   lang: python
 
 # Benchmark(s) whose stages this module implements.
