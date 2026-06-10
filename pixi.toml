@@ -20,15 +20,18 @@ numpy = ">=2.4.3,<3"
 polars = ">=1,<2"
 
 # Bootstrap tooling, kept out of the (heavy) default env. `pixi run pull` vendors
-# the shared common/ from a sibling checkout of the boilerplate; pull.py is
-# CWD-relative and only needs pyyaml + git, so it runs in its own lean env.
-#   layout assumed:  <parent>/boilerplate  and  <parent>/scanpy (this repo)
+# the shared common/ — no sibling checkout needed: it fetches pull.py from the
+# boilerplate over HTTP and runs it (pull.py is CWD-relative and only needs
+# pyyaml + git). The vendored CONTENT still comes from `boilerplate.repo`@`ref`
+# in omnibenchmark.yaml; keep the script ref in the URL below aligned with the
+# content ref you pin there.
 [feature.bootstrap.dependencies]
 python = ">=3.11"
 pyyaml = ">=6"
+curl = "*"
 
 [feature.bootstrap.tasks]
-pull = "python ../boilerplate/scripts/pull.py"
+pull = "curl -fsSL https://raw.githubusercontent.com/omni-scrna/boilerplate/main/scripts/pull.py | python -"
 
 [environments]
 bootstrap = { features = ["bootstrap"], no-default-feature = true }
