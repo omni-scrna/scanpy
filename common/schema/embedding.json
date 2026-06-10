@@ -1,0 +1,9 @@
+{
+  "interface": "embedding",
+  "version": "0.1.0",
+  "benchmark": "omni-scrna/split-stages-plan",
+  "args": [
+    { "flag": "--pcas.tsv", "dest": "pcas", "type": "path", "help": "PCA TSV (embedding matrix, cell_ids as rownames)" },
+    { "flag": "--rawdata.clusters_truth", "dest": "clusters_truth", "type": "path", "help": "TSV of ground-truth cluster labels (cell_id, truths)" }
+  ]
+}
