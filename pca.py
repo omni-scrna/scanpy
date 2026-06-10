@@ -18,6 +18,7 @@ Implementation notes
   variant rather than as an independent flag.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -27,9 +28,26 @@ import scipy.sparse as sp
 import anndata as ad
 import scanpy as sc
 
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-from cli import build_pca_parser  # noqa: E402
+sys.path.insert(0, str(Path(__file__).parent))          # vendored `common` package
+sys.path.insert(0, str(Path(__file__).parent / "src"))  # module-local writers
+from common import cli  # noqa: E402
 from writers import Embedding, write_embeddings  # noqa: E402
+
+
+def parse_args():
+    # We own the parser; common/cli injects the shared contract (base args + the
+    # `pca` stage I/O from common/schema). This module's method params are
+    # hand-rolled below, so the whole CLI stays visible here.
+    p = argparse.ArgumentParser(description="PCA module (scanpy-backed)")
+    cli.add_base_args(p)            # --output_dir, --name
+    cli.add_stage_args(p, "pca")    # --normalized_selected.h5  (-> args.input_h5)
+    p.add_argument("--solver", type=str, required=True,
+                   choices=["arpack", "randomized"], help="PCA solver")
+    p.add_argument("--n_components", type=int, required=True,
+                   help="Number of principal components to compute")
+    p.add_argument("--random_seed", type=int, required=True,
+                   help="Seed for randomized solvers (and for reproducibility)")
+    return p.parse_args()
 
 
 def load_matrix(h5_path):
@@ -82,7 +100,7 @@ def run_pca(adata, args):
 
 
 def main():
-    args = build_pca_parser().parse_args()
+    args = parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
     for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")

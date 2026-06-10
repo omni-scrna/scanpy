@@ -1,0 +1,17 @@
+# Caller workflow installed into a module at .github/workflows/validate-module.yml.
+# It is intentionally tiny: all the work lives in the reusable composite action,
+# so fixes upstream reach every module without re-installing.
+name: Validate module
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate-module:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: omni-scrna/boilerplate/actions/validate-module@main
