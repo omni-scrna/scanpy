@@ -1,8 +1,0 @@
-{
-  "interface": "knn",
-  "args": [
-    { "flag": "--n_neighbors", "type": "integer", "help": "Number of nearest neighbors" },
-    { "flag": "--flavor", "type": "string", "choices": ["umap", "gauss"], "help": "Method to compute connectivities" },
-    { "flag": "--random_seed", "type": "integer", "help": "Random seed" }
-  ]
-}

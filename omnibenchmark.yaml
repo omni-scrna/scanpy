@@ -18,8 +18,9 @@ template-for:
   - { name: split-stages, repo: https://github.com/omni-scrna/split-stages-plan, plan: benchmark_conda.yaml, ref: main }
 
 # Stage interfaces this module satisfies, as <benchmark-label>/<interface>@<version>.
-# Each <interface>.json (the stage I/O contract) is benchmark-owned; method
-# parameters live alongside in <interface>.extends.json (module-owned).
+# Each <interface>.json (the stage I/O contract) is benchmark-owned and injected
+# onto the entrypoint's parser via common/cli.add_stage_args(); this module's own
+# method params are hand-rolled in the entrypoint (pca.py / knn.py).
 implements:
   - split-stages/pca@0.1.0
   - split-stages/knn@0.1.0
