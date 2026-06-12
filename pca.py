@@ -13,9 +13,10 @@ One row per cell; values are float64 PCA scores.
 
 Implementation notes
 --------------------
-- Genes are always centered/scaled before PCA (sc.pp.scale, zero_center=True).
-  If alternative scaling is needed later, maybe expose it as a new --pca_type
-  variant rather than as an independent flag.
+- Genes are mean-centered (only) before PCA via sc.pp.pca(zero_center=True).
+  No per-gene variance scaling — matches scrapper/rapids-singlecell. If
+  alternative scaling is needed later, expose it as a new --pca_type variant
+  rather than as an independent flag.
 """
 
 import sys
@@ -30,6 +31,8 @@ import scanpy as sc
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from cli import build_pca_parser  # noqa: E402
 from writers import Embedding, write_embeddings  # noqa: E402
+from phases import phase  # noqa: E402
+from obkit.logger import init_logger  # noqa: E402
 
 
 def load_matrix(h5_path):
@@ -50,27 +53,19 @@ def load_matrix(h5_path):
 
 
 def run_pca(adata, args):
-    sc.pp.scale(adata, zero_center=True, max_value=None)
-
-    # TODO: accept chunked argument too, to cap memory usage (triggers
-    # incremental PCA approach -- maybe pass it as pca_type and enforce
-    # chunked.
-    # A larger chunk_size improves numerical stability and speed (up to a
-    # point) but increases the memory ceiling.
-    # Chunked mode is most effective when paired with backed mode (e.g., adata
-    # = sc.read_h5ad('file.h5ad', backed='r')). If the AnnData object is
-    # already fully loaded into memory, using chunked=True provides no memory
-    # benefit and will simply slow down the computation.
-    # IncrementalPCA in scikit-learn traditionally prefers dense inputs. If
-    # your data is sparse, Scanpy may need to densify each chunk during the
-    # partial_fit step, which can cause local spikes in memory usage.
+    # Chunked mode triggers IncrementalPCA. It is most effective with backed
+    # AnnData; for in-memory data it provides no memory benefit and is slower.
+    # Sparse inputs get densified per chunk during partial_fit.
+    chunked = args.chunked == "true"
 
     sc.pp.pca(
         adata,
         n_comps=args.n_components,
         zero_center=True,
-        svd_solver=args.solver,
+        svd_solver=args.solver if not chunked else None,
         random_state=args.random_seed,
+        chunked=chunked,
+        chunk_size=args.chunk_size if chunked else None,
     )
 
     embedding = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
@@ -80,26 +75,49 @@ def run_pca(adata, args):
     return embedding, loadings, variance, variance_ratio
 
 
+def validate_args(args):
+    chunked = args.chunked == "true"
+    if chunked:
+        if args.chunk_size is None:
+            sys.exit("error: --chunk_size is required when --chunked=true")
+        if args.solver is not None:
+            sys.exit("error: --solver must not be set when --chunked=true (IncrementalPCA ignores it)")
+    else:
+        if args.chunk_size is not None:
+            sys.exit("error: --chunk_size must not be set when --chunked=false")
+        if args.solver is None:
+            sys.exit("error: --solver is required when --chunked=false")
+
+
 
 def main():
     args = build_pca_parser().parse_args()
+    validate_args(args)
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed"):
+    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed", "chunked", "chunk_size"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    init_logger(args.output_dir)
 
-    adata = load_matrix(args.input_h5)
+    with phase("load") as attrs:
+        adata = load_matrix(args.input_h5)
+        attrs["n_cells"] = adata.n_obs
+        attrs["n_genes"] = adata.n_vars
     gene_ids = np.array(adata.var_names)
     cell_ids = np.array(adata.obs_names)
     print(f"  matrix (cells x genes): {adata.shape}")
 
-    embedding, loadings, variance, variance_ratio = run_pca(adata, args)
+    with phase("pca") as attrs:
+        embedding, loadings, variance, variance_ratio = run_pca(adata, args)
+        attrs["solver"] = args.solver or "chunked"
+        attrs["n_components"] = args.n_components
     print(f"  embedding: {embedding.shape}, loadings: {loadings.shape}")
 
-    col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
-    out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
-    write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
+    with phase("write"):
+        col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
+        out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
+        write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
     print(f"  wrote: {out}")
 
 
