@@ -15,11 +15,9 @@ boilerplate:
   lang: python
 
 # Benchmark(s) this module plugs into. `pull` vendors each one's whole schema/ dir
-# (the _base + every stage <interface>.json) into src/common/schema/; an entrypoint
+# (the _base + every stage <stage-id>.json) into src/common/schema/; an entrypoint
 # loads the stage it needs by name via common/cli.add_stage_args() and the engine
-# errors if that schema isn't vendored. There is no `implements:` ledger and no
-# per-interface version handshake — the module simply carries whatever the
-# benchmark publishes at the pinned `ref`.
+# errors if that schema isn't found
 benchmarks:
   - name: split-stages
     repo: https://github.com/omni-scrna/split-stages-plan
