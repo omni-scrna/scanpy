@@ -12,3 +12,6 @@ dependencies:
 - scipy >=1.17.1,<2
 - numpy >=2.4.3,<3
 - polars >=1,<2
+- pip
+- pip:
+  - obkit>=0.0.3, <0.0.4

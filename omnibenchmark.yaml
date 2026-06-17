@@ -3,3 +3,23 @@
 entrypoints:
   pca: pca.py
   pca-prof: denet pca.py
+  knn: knn.py
+
+# Shared CLI engine vendored under src/common/ from a ref (the _base + stage
+# schemas come from the benchmark below, not here). Interim, pre-`ob`:
+# `pixi run -e bootstrap sync` (from this module root) refreshes it.
+# See https://github.com/omni-scrna/boilerplate.
+boilerplate:
+  repo: https://github.com/omni-scrna/boilerplate
+  ref: main            # track the tip (unpinned); src/common/.provenance.json witnesses what we carry
+  lang: python
+
+# Benchmark(s) this module plugs into. `pull` vendors each one's whole schema/ dir
+# (the _base + every stage <stage-id>.json) into src/common/schema/; an entrypoint
+# loads the stage it needs by name via common/cli.add_stage_args() and the engine
+# errors if that schema isn't found
+benchmarks:
+  - name: split-stages
+    repo: https://github.com/omni-scrna/split-stages-plan
+    plan: benchmark_conda.yaml
+    ref: feat/contract-fixtures
