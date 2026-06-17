@@ -9,7 +9,7 @@ entrypoints:
 # schemas come from the benchmark below, not here). Interim, pre-`ob`:
 # `pixi run -e bootstrap sync` (from this module root) refreshes it.
 # See https://github.com/omni-scrna/boilerplate.
-boilerplate:
+templates:
   repo: https://github.com/omni-scrna/boilerplate
   ref: main            # track the tip (unpinned); src/common/.provenance.json witnesses what we carry
   lang: python
