@@ -94,7 +94,9 @@ def run_pca(adata, args):
 
 
 def validate_args(args):
-    chunked = args.chunked == "true"
+    #chunked = args.chunked == "true"
+    chunked = False
+
     if chunked:
         if args.chunk_size is None:
             sys.exit("error: --chunk_size is required when --chunked=true")
@@ -111,7 +113,7 @@ def validate_args(args):
 def main():
     args = parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "normalized_selected_h5", "solver", "n_components", "random_seed", "chunked", "chunk_size"):
+    for k in ("output_dir", "name", "normalized_selected_h5", "solver", "n_components", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
