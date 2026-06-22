@@ -41,8 +41,8 @@ def parse_args():
     # `five-pca` stage I/O from common/schema). This module's method params are
     # hand-rolled below, so the whole CLI stays visible here.
     p = argparse.ArgumentParser(description="PCA module (scanpy-backed)")
-    cli.add_base_args(p)                  # --output_dir, --name
-    cli.add_stage_args(p, "five-pca")     # --normalized_selected.h5  (-> args.input_h5)
+    cli.add_base_args(p)             # --output_dir, --name
+    cli.add_stage_args(p, "PCA")     # --normalized_selected_h5  
     p.add_argument("--solver", type=str, required=True,
                    choices=["arpack", "randomized"], help="PCA solver")
     p.add_argument("--n_components", type=int, required=True,
@@ -73,7 +73,8 @@ def run_pca(adata, args):
     # Chunked mode triggers IncrementalPCA. It is most effective with backed
     # AnnData; for in-memory data it provides no memory benefit and is slower.
     # Sparse inputs get densified per chunk during partial_fit.
-    chunked = args.chunked == "true"
+    #chunked = args.chunked == "true"
+    chunked = False
 
     sc.pp.pca(
         adata,
@@ -110,14 +111,14 @@ def validate_args(args):
 def main():
     args = parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed", "chunked", "chunk_size"):
+    for k in ("output_dir", "name", "normalized_selected_h5", "solver", "n_components", "random_seed", "chunked", "chunk_size"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     init_logger(args.output_dir)
 
     with phase("load") as attrs:
-        adata = load_matrix(args.input_h5)
+        adata = load_matrix(args.normalized_selected_h5)
         attrs["n_cells"] = adata.n_obs
         attrs["n_genes"] = adata.n_vars
     gene_ids = np.array(adata.var_names)
