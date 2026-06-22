@@ -26,7 +26,7 @@ def parse_args():
     # hand-rolled below, so the whole CLI stays visible here.
     p = argparse.ArgumentParser(description="kNN graph module (scanpy-backed)")
     cli.add_base_args(p)                # --output_dir, --name
-    cli.add_stage_args(p, "nngraph")    # --pcas.tsv  (-> args.pcas_tsv)
+    cli.add_stage_args(p, "nngraph")    # --pcas_tsv  
     p.add_argument("--n_neighbors", type=int, required=True,
                    help="Number of nearest neighbors")
     p.add_argument("--flavor", type=str, required=True,
