@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "benchmark": "omni-scrna/split-stages-plan",
   "args": [
-    { "flag": "--pcas_tsv", "dest": "pcas_tsv", "type": "path", "help": "PCA embedding TSV (the five-pca stage's `pcas.tsv` output); mapped to internal pca_tsv" }
+    { "flag": "--pcas_tsv", "type": "path", "help": "PCA embedding TSV (the five-pca stage's `pcas.tsv` output); mapped to internal pca_tsv" }
   ]
 }
