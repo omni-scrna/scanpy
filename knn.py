@@ -26,7 +26,7 @@ def parse_args():
     # hand-rolled below, so the whole CLI stays visible here.
     p = argparse.ArgumentParser(description="kNN graph module (scanpy-backed)")
     cli.add_base_args(p)                # --output_dir, --name
-    cli.add_stage_args(p, "nngraph")    # --pcas.tsv  (-> args.pca_tsv)
+    cli.add_stage_args(p, "nngraph")    # --pcas.tsv  (-> args.pcas_tsv)
     p.add_argument("--n_neighbors", type=int, required=True,
                    help="Number of nearest neighbors")
     p.add_argument("--flavor", type=str, required=True,
@@ -47,13 +47,13 @@ def write_sparse(h5, name, m):
 def main():
     args = parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "pca_tsv", "n_neighbors", "flavor", "random_seed"):
+    for k in ("output_dir", "name", "pcas_tsv", "n_neighbors", "flavor", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     # TSV has N header cols and N+1 data cols (first data col = row IDs, unnamed).
-    df = pl.read_csv(args.pca_tsv, separator="\t", skip_rows=1, has_header=False)
+    df = pl.read_csv(args.pcas_tsv, separator="\t", skip_rows=1, has_header=False)
     embedding = df[:, 1:].to_numpy().astype(np.float64)
 
     adata = ad.AnnData(X=np.zeros((embedding.shape[0], 1)))
