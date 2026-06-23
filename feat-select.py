@@ -134,7 +134,7 @@ def main():
             f"number_selected={number_selected} is larger than number of features={adata_norm.n_vars}"
         )
     
-    if args.flavor == "scanpy_hvg":
+    if args.flavor == "scanpy_seurat":
         sel_feats = select_by_scanpy_hvg(adata_norm, number_selected)
 
     # TODO：order by gini coef and select top  N; currently it is based on pvalue
