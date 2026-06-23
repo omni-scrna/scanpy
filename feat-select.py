@@ -27,6 +27,13 @@ def parse_args():
     return p.parse_args()
 
 
+def _decode(x):
+    return np.array([
+        v.decode("utf-8") if isinstance(v, bytes) else str(v)
+        for v in x
+    ])
+
+
 def read_tenx_matrix(h5_path):
     """Load TENx HDF5 (genes x cells) as AnnData.
 
