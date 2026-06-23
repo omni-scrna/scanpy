@@ -138,7 +138,7 @@ def main():
         sel_feats = select_by_scanpy_hvg(adata_norm, number_selected)
 
     # TODO：order by gini coef and select top  N; currently it is based on pvalue
-    # elif args.selection_type == "giniclust3":
+    # elif args.flavor == "giniclust3":
     #     sel_feats = select_by_giniclust3(adata, number_selected)
 
     elif args.flavor == "pearson_residuals":
@@ -158,7 +158,7 @@ def main():
         sel_feats = select_by_scanpy_pearson_residuals(adata_filtered, number_selected)
 
     else:
-        raise ValueError(f"Unknown selection_type: {args.selection_type}")
+        raise ValueError(f"Unknown selection_type: {args.flavor}")
 
     print(f"length(sel_feats): {len(sel_feats)}")
 
