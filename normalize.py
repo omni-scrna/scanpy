@@ -88,7 +88,7 @@ def main():
     adata.X = adata.layers["counts"].copy()
 
     # Normalize
-    if args.normalization_type == "scanpy_log1pCP10k":
+    if args.normalization_type == "log1pCP10k":
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
     else:
