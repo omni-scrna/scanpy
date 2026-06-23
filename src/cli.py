@@ -91,7 +91,7 @@ def build_cluster_parser():
     add_common_args(parser)
 
     parser.add_argument(
-        "--neighbors.h5",
+        "--neighbors_h5",
         dest="neighbors",
         type=str,
         required=True,
