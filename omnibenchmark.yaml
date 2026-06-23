@@ -5,7 +5,7 @@ entrypoints:
   pca-prof: denet pca.py
   knn: knn.py
   normalize: normalize.py
-  feat-select: select.py
+  feat-select: feat-select.py
 
 # common code
 # `pixi run -e dev sync` (from this module root) refreshes it.
