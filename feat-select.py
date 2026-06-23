@@ -23,6 +23,7 @@ def parse_args():
     cli.add_base_args(p)              # --output_dir, --name
     cli.add_stage_args(p, "FEAT")     # --rawdata_h5ad, --normalized_h5, --filtered_cellids, --properties_info
     p.add_argument("--flavor", type=str, required=True, help="Feature selection type")
+    p.add_argument("--number_selected", type=int, required=True, help="Number of features to select")
     return p.parse_args()
 
 def write_tenx_matrix(adata, h5_path):
