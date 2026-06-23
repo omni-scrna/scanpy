@@ -31,7 +31,7 @@ import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))  # vendored `common` (src/common) + module-local writers
 from common import cli  # noqa: E402
-from writers import Embedding, write_embeddings  # noqa: E402
+from writers import Embedding, Loadings, write_embeddings, write_loadings  # noqa: E402
 from phases import phase  # noqa: E402
 from obkit.logger import init_logger  # noqa: E402
 
@@ -135,9 +135,13 @@ def main():
 
     with phase("write"):
         col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
-        out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
-        write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
-    print(f"  wrote: {out}")
+        embedding_out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
+        write_embeddings(Embedding(embedding, list(cell_ids), col_names), embedding_out)
+
+        loadings_out = Path(args.output_dir) / f"{args.name}_loadings.tsv"
+        write_loadings(Loadings(loadings, list(gene_ids), col_names), loadings_out)
+    print(f"  wrote: {embedding_out}")
+    print(f"  wrote: {loadings_out}")
 
 
 if __name__ == "__main__":
