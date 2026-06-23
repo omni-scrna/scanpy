@@ -4,6 +4,7 @@ entrypoints:
   pca: pca.py
   pca-prof: denet pca.py
   knn: knn.py
+  normalize: normalize.py
 
 # common code
 # `pixi run -e dev sync` (from this module root) refreshes it.
@@ -17,4 +18,4 @@ benchmarks:
   - name: split-stages
     repo: https://github.com/omni-scrna/split-stages-plan
     plan: benchmark_conda.yaml
-    ref: main
+    ref: new-stage-naming

@@ -38,11 +38,11 @@ from obkit.logger import init_logger  # noqa: E402
 
 def parse_args():
     # We own the parser; src/common/cli injects the shared contract (base args + the
-    # `five-pca` stage I/O from common/schema). This module's method params are
+    # `PCA` stage I/O from common/schema). This module's method params are
     # hand-rolled below, so the whole CLI stays visible here.
     p = argparse.ArgumentParser(description="PCA module (scanpy-backed)")
     cli.add_base_args(p)             # --output_dir, --name
-    cli.add_stage_args(p, "five-pca")     # --normalized_selected_h5  
+    cli.add_stage_args(p, "PCA")     # --normalized_selected_h5  
     p.add_argument("--solver", type=str, required=True,
                    choices=["arpack", "randomized"], help="PCA solver")
     p.add_argument("--n_components", type=int, required=True,
