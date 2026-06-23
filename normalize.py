@@ -69,23 +69,17 @@ def main():
     print(f"rawdata.h5ad: {args.rawdata_h5ad}")
     print(f"filtered.cellids: {args.filtered_cellids}")
 
-    # Access stage inputs
-    rawdata_h5ad_files = args.rawdata_h5ad
-    filtered_cellids_files = args.filtered_cellids
-
-    # Read inputs
-    input_h5ad = rawdata_h5ad_files[0]
-    input_cellids = filtered_cellids_files[0]
-
     # Read filtered cell IDs
-    with gzip.open(input_cellids, "rt") as f:
+    with gzip.open(args.filtered_cellids, "rt") as f:
         cellids = [line.strip() for line in f if line.strip()]
 
     print(f"  number of filtered cells: {len(cellids)}")
 
-    adata = sc.read_h5ad(input_h5ad)
+    adata = sc.read_h5ad(args.rawdata_h5ad)
     adata = adata[cellids, :].copy()
     adata.X = adata.layers["counts"].copy()
+
+    print(f"  shape of adata.X: {adata.X.shape}")
 
     # Normalize
     if args.normalization_type == "log1pCP10k":
