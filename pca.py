@@ -117,7 +117,7 @@ def main():
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    init_logger(args.output_dir)
+    init_logger(str(args.output_dir))
 
     with phase("load") as attrs:
         adata = load_matrix(args.normalized_selected_h5)
