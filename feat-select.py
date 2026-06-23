@@ -135,11 +135,11 @@ def main():
         )
     
     if args.flavor == "scanpy_seurat":
-        sel_feats = select_by_scanpy_hvg(adata_norm, number_selected)
+        sel_feats = select_by_scanpy_hvg(adata_norm, args.number_selected)
 
     # TODO：order by gini coef and select top  N; currently it is based on pvalue
     # elif args.flavor == "giniclust3":
-    #     sel_feats = select_by_giniclust3(adata, number_selected)
+    #     sel_feats = select_by_giniclust3(adata, args.number_selected)
 
     elif args.flavor == "pearson_residuals":
         adata_raw = sc.read_h5ad(args.rawdata_h5ad)
@@ -155,7 +155,7 @@ def main():
         else:
             adata_filtered.X = np.asarray(adata_filtered.X)
 
-        sel_feats = select_by_scanpy_pearson_residuals(adata_filtered, number_selected)
+        sel_feats = select_by_scanpy_pearson_residuals(adata_filtered, args.number_selected)
 
     else:
         raise ValueError(f"Unknown selection_type: {args.flavor}")
