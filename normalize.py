@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import h5py
+import gzip
 import numpy as np
 from scipy import sparse
 import anndata as ad
