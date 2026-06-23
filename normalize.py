@@ -83,7 +83,7 @@ def main():
     print(f"  shape of adata.X: {adata.X.shape}")
 
     # Normalize
-    if args.normalization_type == "log1pCP10k":
+    if args.flavor == "log1pCP10k":
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
     else:
