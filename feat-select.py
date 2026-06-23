@@ -26,6 +26,44 @@ def parse_args():
     p.add_argument("--number_selected", type=int, required=True, help="Number of features to select")
     return p.parse_args()
 
+
+def read_tenx_matrix(h5_path):
+    """Load TENx HDF5 (genes x cells) as AnnData.
+
+    H5 stores genes x cells.
+    AnnData stores cells x genes.
+    """
+    with h5py.File(h5_path, "r") as h5:
+        g = h5["matrix"]
+
+        data = g["data"][:]
+        indices = g["indices"][:]
+        indptr = g["indptr"][:]
+        shape = tuple(g["shape"][:])
+
+        if "features" in g and "id" in g["features"]:
+            gene_ids = g["features/id"][:]
+        elif "genes" in g:
+            gene_ids = g["genes"][:]
+        else:
+            gene_ids = np.array([f"gene_{i}".encode() for i in range(shape[0])])
+
+        if "barcodes" in g:
+            cell_ids = g["barcodes"][:]
+        else:
+            cell_ids = np.array([f"cell_{i}".encode() for i in range(shape[1])])
+
+    gene_ids = _decode(gene_ids)
+    cell_ids = _decode(cell_ids)
+
+    m = sparse.csc_matrix((data, indices, indptr), shape=shape)
+
+    adata = sc.AnnData(X=m.T.tocsr())
+    adata.obs_names = cell_ids
+    adata.var_names = gene_ids
+    return adata
+
+
 def write_tenx_matrix(adata, h5_path):
     """Write AnnData cells x genes as TENx-like HDF5 matrix genes x cells."""
     X = adata.X
