@@ -2,12 +2,16 @@
 """kNN graph module (scanpy-backed) for omnibenchmark.
 
 Output HDF5: {output_dir}/{name}_neighbors.h5
-  Flat CSR of the kNN distance graph, matching the R metrics reader
-  (graph.R::read_csr_h5), which reads these datasets from the file root:
+  Flat CSR of the kNN distance graph at the file root, matching the R metrics
+  reader (graph.R::read_csr_h5), which reads these datasets from the root:
     /cell_ids   string array (n_cells,)
     /data       CSR data
     /indices    CSR column indices (0-based)
     /indptr     CSR row pointers
+  The connectivities scanpy builds alongside the distances are stored under a
+  nested group so the clustering stage can read them directly instead of
+  reconstructing them (both graphs share /cell_ids):
+    /connectivities/{data,indices,indptr}  CSR (n_cells, n_cells)
 """
 
 import argparse
@@ -38,20 +42,20 @@ def parse_args():
     return p.parse_args()
 
 
-def _write_sparse(h5, cell_ids, m):
-    # Flat layout with datasets at the file root.
+def _write_csr(grp, m):
     m = m.tocsr()
-    # dtype="S": h5py can't write numpy unicode ('<U') arrays; bytes give portable fixed-length HDF5 strings.
-    h5.create_dataset("cell_ids", data=np.array(cell_ids, dtype="S"))
-    h5.create_dataset("data",    data=m.data)
-    h5.create_dataset("indices", data=m.indices)
-    h5.create_dataset("indptr",  data=m.indptr)
+    grp.create_dataset("data",    data=m.data)
+    grp.create_dataset("indices", data=m.indices)
+    grp.create_dataset("indptr",  data=m.indptr)
 
 
 def write_neighbors_graph(adata, out_dir, name):
     out = Path(out_dir) / f"{name}_neighbors.h5"
     with h5py.File(out, "w") as h5:
-        _write_sparse(h5, adata.obs_names.to_list(), adata.obsp["distances"])
+        # dtype="S": h5py can't write numpy unicode ('<U') arrays; bytes give portable fixed-length HDF5 strings.
+        h5.create_dataset("cell_ids", data=np.array(adata.obs_names.to_list(), dtype="S"))
+        _write_csr(h5, adata.obsp["distances"])  # distances flat at the root (R metrics reader)
+        _write_csr(h5.create_group("connectivities"), adata.obsp["connectivities"])
     print(f"  wrote: {out}")
 
 
