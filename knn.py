@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """kNN graph module (scanpy-backed) for omnibenchmark.
 
-Output HDF5: {output_dir}/{name}_knn.h5
-  /distances/data, /distances/indices, /distances/indptr, /distances/shape
-  /connectivities/data, /connectivities/indices, /connectivities/indptr, /connectivities/shape
-  attrs: format_version, tool, tool_version, n_neighbors, random_seed
+Output HDF5: {output_dir}/{name}_neighbors.h5
+  Flat CSR of the kNN distance graph, matching the R metrics reader
+  (graph.R::read_csr_h5), which reads these datasets from the file root:
+    /cell_ids   string array (n_cells,)
+    /data       CSR data
+    /indices    CSR column indices (0-based)
+    /indptr     CSR row pointers
 """
 
 import argparse
@@ -26,7 +29,7 @@ def parse_args():
     # hand-rolled below, so the whole CLI stays visible here.
     p = argparse.ArgumentParser(description="kNN graph module (scanpy-backed)")
     cli.add_base_args(p)                # --output_dir, --name
-    cli.add_stage_args(p, "NNG")    # --pcas_tsv  
+    cli.add_stage_args(p, "NNG")    # --pcas_tsv
     p.add_argument("--n_neighbors", type=int, required=True,
                    help="Number of nearest neighbors")
     p.add_argument("--flavor", type=str, required=True,
@@ -35,13 +38,21 @@ def parse_args():
     return p.parse_args()
 
 
-def write_sparse(h5, name, m):
+def _write_sparse(h5, cell_ids, m):
+    # Flat layout with datasets at the file root.
     m = m.tocsr()
-    g = h5.create_group(name)
-    g.create_dataset("data",    data=m.data)
-    g.create_dataset("indices", data=m.indices)
-    g.create_dataset("indptr",  data=m.indptr)
-    g.create_dataset("shape",   data=np.array(m.shape))
+    # dtype="S": h5py can't write numpy unicode ('<U') arrays; bytes give portable fixed-length HDF5 strings.
+    h5.create_dataset("cell_ids", data=np.array(cell_ids, dtype="S"))
+    h5.create_dataset("data",    data=m.data)
+    h5.create_dataset("indices", data=m.indices)
+    h5.create_dataset("indptr",  data=m.indptr)
+
+
+def write_neighbors_graph(adata, out_dir, name):
+    out = Path(out_dir) / f"{name}_neighbors.h5"
+    with h5py.File(out, "w") as h5:
+        _write_sparse(h5, adata.obs_names.to_list(), adata.obsp["distances"])
+    print(f"  wrote: {out}")
 
 
 def main():
@@ -63,12 +74,7 @@ def main():
     sc.pp.neighbors(adata, n_neighbors=args.n_neighbors, method=args.flavor,
                     use_rep="X_pca", random_state=args.random_seed)
 
-    out = Path(args.output_dir) / f"{args.name}_neighbors.h5"
-    with h5py.File(out, "w") as h5:
-        write_sparse(h5, "distances",     adata.obsp["distances"])
-        write_sparse(h5, "connectivities", adata.obsp["connectivities"])
-
-    print(f"  wrote: {out}")
+    write_neighbors_graph(adata, args.output_dir, args.name)
 
 
 if __name__ == "__main__":
