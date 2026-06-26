@@ -58,7 +58,7 @@ def parse_args():
 
 
 def build_adata(neighbors_h5):
-     """AnnData with the stored distances/connectivities graph wired up for scanpy."""
+    """AnnData with the stored distances/connectivities graph wired up for scanpy."""
     distances, connectivities, cell_ids = read_neighbors(neighbors_h5)
     adata = ad.AnnData(X=np.zeros((len(cell_ids), 1)))
     adata.obs_names = cell_ids
