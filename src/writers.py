@@ -12,25 +12,40 @@ class Embedding:
     col_names: list = field(default_factory=list)  # dim labels; auto-generated if empty
 
 
+@dataclass
+class Loadings:
+    matrix: np.ndarray        # shape (n_genes, n_dims)
+    row_ids: list             # gene ids, length n_genes
+    col_names: list = field(default_factory=list)  # dim labels; auto-generated if empty
+
+
 def _col_names(embedding):
     if embedding.col_names:
         return embedding.col_names
     return [f"dim_{i + 1}" for i in range(embedding.matrix.shape[1])]
 
 
-def _write_tsv(path, embedding):
+def _write_tsv(path, embedding, row_label):
     # Header has N cols, data rows N+1 (row_ids unnamed first column);
     # read.table(f, header=TRUE) auto-promotes the extra leading column to row.names.
     cols = _col_names(embedding)
     df = pl.from_numpy(embedding.matrix, schema=cols).insert_column(
         0, pl.Series("", embedding.row_ids))
     with open(path, "w") as f:
-        f.write("cell_id\t" + "\t".join(cols) + "\n")
+        f.write(row_label + "\t" + "\t".join(cols) + "\n")
         df.write_csv(f, separator="\t", include_header=False)
 
 
 def write_embeddings(obj, path, format="tsv"):
     if format == "tsv":
-        _write_tsv(path, obj)
+        _write_tsv(path, obj, "cell_id")
+    else:
+        raise ValueError(f"unsupported format: {format!r}")
+
+
+def write_loadings(obj, path, format="tsv"):
+    # Same on-disk layout as embeddings, but rows are genes: first column is gene_id.
+    if format == "tsv":
+        _write_tsv(path, obj, "gene_id")
     else:
         raise ValueError(f"unsupported format: {format!r}")

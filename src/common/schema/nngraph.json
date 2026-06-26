@@ -1,8 +1,0 @@
-{
-  "stage": "nngraph",
-  "version": "0.1.0",
-  "benchmark": "omni-scrna/split-stages-plan",
-  "args": [
-    { "flag": "--pcas.tsv", "dest": "pca_tsv", "type": "path", "help": "PCA embedding TSV (the five-pca stage's `pcas.tsv` output); mapped to internal pca_tsv" }
-  ]
-}

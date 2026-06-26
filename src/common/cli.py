@@ -24,7 +24,7 @@ here and in ``src/common/r/cli.R`` so Python and R entrypoints share one contrac
 Schema shape::
 
     {
-      "interface": "embedding",
+      "stage": "two-filter",
       "benchmark": "omni-scrna/split-stages-plan",
       "args": [
         {"flag": "--pcas.tsv", "dest": "pcas", "type": "path", "help": "..."},
@@ -42,23 +42,15 @@ Two synced schema files back the helpers:
 
   * ``_base.json``        — universal args every module gets
                             (``--output_dir``, ``--name``); added by ``add_base_args``.
-  * ``<interface>.json``  — the stage's I/O contract (benchmark-owned); added by
+  * ``<stage-id>.json``   — the stage's I/O contract (benchmark-owned); added by
                             ``add_stage_args(parser, "<interface>")``.
 
-Note (history): an earlier iteration made this a *parser factory* — it built the
-whole parser from JSON and composed a third ``<interface>.extends.json`` overlay
-plus auto-picked the sole schema (``parse_args("embedding")``, no argparse in the
-entrypoint). That was deliberately simplified to these import-helpers because the
-fully-declarative engine was too much machinery; the richer version is recoverable
-from git history if it's ever wanted back.
 """
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
-
-__version__ = "0.1.0"  # x-release-version — stamped from src/common/VERSION by `pixi run version`
 
 def _find_schema_dir() -> Path:
     # Works under both layouts: the copied-in `src/common/cli.py` (schema is a sibling)
@@ -73,14 +65,6 @@ def _find_schema_dir() -> Path:
 _SCHEMA_DIR = _find_schema_dir()
 _TYPES = {"path": Path, "string": str, "integer": int, "number": float}
 _BASE_SCHEMA = "_base"  # universal args (--output_dir, --name)
-
-
-def common_version() -> str:
-    """Version of the src/common shared code, so a module can report which copy
-    of the boilerplate scaffolding it carries. Stamped from src/common/VERSION
-    (single source of truth) — bump VERSION and run `pixi run version`."""
-    return __version__
-
 
 def _default_dest(flag: str) -> str:
     return flag.lstrip("-").replace(".", "_").replace("-", "_")
@@ -116,25 +100,15 @@ def add_base_args(parser: argparse.ArgumentParser,
     return _add_args(parser, _read_schema(base_path).get("args", []))
 
 
-def add_stage_args(parser: argparse.ArgumentParser, interface: str,
+def add_stage_args(parser: argparse.ArgumentParser, schema: str,
                    schema_dir: Path = _SCHEMA_DIR) -> argparse.ArgumentParser:
-    """Add the stage's I/O contract from ``schema/<interface>.json`` to the
+    """Add the stage's I/O contract from ``schema/<stage-id>.json`` to the
     author's parser. Returns the parser for chaining."""
-    stage_path = schema_dir / f"{interface}.json"
+    stage_path = schema_dir / f"{schema}.json"
     if not stage_path.is_file():
         available = sorted(
             p.stem for p in schema_dir.glob("*.json") if p.stem != _BASE_SCHEMA
         ) if schema_dir.is_dir() else []
         have = f"available: {', '.join(available)}" if available else "no stage schemas vendored"
-        raise SystemExit(f"interface '{interface}' not found in {schema_dir} ({have})")
+        raise SystemExit(f"interface '{schema}' not found in {schema_dir} ({have})")
     return _add_args(parser, _read_schema(stage_path).get("args", []))
-
-
-# TODO: remove this cruft
-if __name__ == "__main__":  # smoke / live demo
-    parser = argparse.ArgumentParser(description="cli helpers smoke demo")
-    add_base_args(parser)
-    add_stage_args(parser, "embedding")
-    a = parser.parse_args()
-    for k, v in sorted(vars(a).items()):
-        print(f"{k}={v}")

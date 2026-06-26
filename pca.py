@@ -31,18 +31,18 @@ import scanpy as sc
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))  # vendored `common` (src/common) + module-local writers
 from common import cli  # noqa: E402
-from writers import Embedding, write_embeddings  # noqa: E402
+from writers import Embedding, Loadings, write_embeddings, write_loadings  # noqa: E402
 from phases import phase  # noqa: E402
 from obkit.logger import init_logger  # noqa: E402
 
 
 def parse_args():
     # We own the parser; src/common/cli injects the shared contract (base args + the
-    # `five-pca` stage I/O from common/schema). This module's method params are
+    # `PCA` stage I/O from common/schema). This module's method params are
     # hand-rolled below, so the whole CLI stays visible here.
     p = argparse.ArgumentParser(description="PCA module (scanpy-backed)")
-    cli.add_base_args(p)                  # --output_dir, --name
-    cli.add_stage_args(p, "five-pca")     # --normalized_selected.h5  (-> args.input_h5)
+    cli.add_base_args(p)             # --output_dir, --name
+    cli.add_stage_args(p, "PCA")     # --normalized_selected_h5  
     p.add_argument("--solver", type=str, required=True,
                    choices=["arpack", "randomized"], help="PCA solver")
     p.add_argument("--n_components", type=int, required=True,
@@ -73,7 +73,8 @@ def run_pca(adata, args):
     # Chunked mode triggers IncrementalPCA. It is most effective with backed
     # AnnData; for in-memory data it provides no memory benefit and is slower.
     # Sparse inputs get densified per chunk during partial_fit.
-    chunked = args.chunked == "true"
+    #chunked = args.chunked == "true"
+    chunked = False
 
     sc.pp.pca(
         adata,
@@ -93,7 +94,9 @@ def run_pca(adata, args):
 
 
 def validate_args(args):
-    chunked = args.chunked == "true"
+    #chunked = args.chunked == "true"
+    chunked = False
+
     if chunked:
         if args.chunk_size is None:
             sys.exit("error: --chunk_size is required when --chunked=true")
@@ -110,14 +113,14 @@ def validate_args(args):
 def main():
     args = parse_args()
     print(f"Full command: {' '.join(sys.argv)}")
-    for k in ("output_dir", "name", "input_h5", "solver", "n_components", "random_seed", "chunked", "chunk_size"):
+    for k in ("output_dir", "name", "normalized_selected_h5", "solver", "n_components", "random_seed"):
         print(f"  {k}: {getattr(args, k)}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    init_logger(args.output_dir)
+    init_logger(str(args.output_dir))
 
     with phase("load") as attrs:
-        adata = load_matrix(args.input_h5)
+        adata = load_matrix(args.normalized_selected_h5)
         attrs["n_cells"] = adata.n_obs
         attrs["n_genes"] = adata.n_vars
     gene_ids = np.array(adata.var_names)
@@ -132,9 +135,13 @@ def main():
 
     with phase("write"):
         col_names = [f"PC{i + 1}" for i in range(embedding.shape[1])]
-        out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
-        write_embeddings(Embedding(embedding, list(cell_ids), col_names), out)
-    print(f"  wrote: {out}")
+        embedding_out = Path(args.output_dir) / f"{args.name}_pcas.tsv"
+        write_embeddings(Embedding(embedding, list(cell_ids), col_names), embedding_out)
+
+        loadings_out = Path(args.output_dir) / f"{args.name}_loadings.tsv"
+        write_loadings(Loadings(loadings, list(gene_ids), col_names), loadings_out)
+    print(f"  wrote: {embedding_out}")
+    print(f"  wrote: {loadings_out}")
 
 
 if __name__ == "__main__":
