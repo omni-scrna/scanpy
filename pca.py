@@ -42,7 +42,7 @@ def parse_args():
     # hand-rolled below, so the whole CLI stays visible here.
     p = argparse.ArgumentParser(description="PCA module (scanpy-backed)")
     cli.add_base_args(p)             # --output_dir, --name
-    cli.add_stage_args(p, "PCA")     # --normalized_selected_h5  
+    cli.add_stage_args(p, "PCA")     # --normalized_selected_h5
     p.add_argument("--solver", type=str, required=True,
                    choices=["arpack", "randomized"], help="PCA solver")
     p.add_argument("--n_components", type=int, required=True,

@@ -4,6 +4,7 @@ entrypoints:
   pca: pca.py
   pca-prof: denet pca.py
   knn: knn.py
+  cluster: cluster.py
   normalize: normalize.py
   feat-select: feat-select.py
 
