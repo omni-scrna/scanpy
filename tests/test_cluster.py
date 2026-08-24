@@ -31,7 +31,8 @@ def neighbors_h5(tmp_path):
 def test_cluster_leiden_separates_blocks(neighbors_h5):
     path, ids = neighbors_h5
     adata, _ = build_adata(path)
-    labels = cluster_leiden(adata, resolution=1.0, random_seed=0)
+    labels = cluster_leiden(adata, flavor="igraph", partition_type="RBConfiguration",
+                            resolution=1.0, random_seed=0)
 
     assert len(labels) == len(ids)
     n = len(ids) // 2
@@ -43,4 +44,5 @@ def test_cluster_leiden_deterministic(neighbors_h5):
     path, _ = neighbors_h5
     a1, _ = build_adata(path)
     a2, _ = build_adata(path)
-    assert cluster_leiden(a1, 1.0, 42) == cluster_leiden(a2, 1.0, 42)
+    args = ("igraph", "RBConfiguration", 1.0, 42)
+    assert cluster_leiden(a1, *args) == cluster_leiden(a2, *args)
