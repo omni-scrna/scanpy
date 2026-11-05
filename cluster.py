@@ -112,7 +112,8 @@ def main():
         adata, args.flavor, args.partition_type, args.resolution, args.random_seed
     )
 
-    out = Path(args.output_dir) / f"{args.name}_clusters.tsv"
+    oid = "clusters_corrected_tsv" if "clusters_corrected_tsv" in dict(args.outputs) else "clusters_tsv"  # CLUST_C
+    out = cli.output_path(args, oid, "_clusters.tsv")
     pl.DataFrame({"cell_id": cell_ids, "cluster": labels}).write_csv(out, separator="\t")
     print(f"  wrote: {out}")
 

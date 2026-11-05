@@ -51,8 +51,7 @@ def _write_csr(grp, m):
     grp.create_dataset("indptr",  data=m.indptr)
 
 
-def write_neighbors_graph(adata, out_dir, name):
-    out = Path(out_dir) / f"{name}_neighbors.h5"
+def write_neighbors_graph(adata, out):
     with h5py.File(out, "w") as h5:
         # dtype="S": h5py can't write numpy unicode ('<U') arrays; bytes give portable fixed-length HDF5 strings.
         h5.create_dataset("cell_ids", data=np.array(adata.obs_names.to_list(), dtype="S"))
@@ -77,7 +76,8 @@ def main():
     sc.pp.neighbors(adata, n_neighbors=args.n_neighbors, method=args.flavor,
                     use_rep="X_pca", random_state=args.random_seed)
 
-    write_neighbors_graph(adata, args.output_dir, args.name)
+    oid = "neighbors_corrected_h5" if "neighbors_corrected_h5" in dict(args.outputs) else "neighbors_h5"  # NNG_C
+    write_neighbors_graph(adata, cli.output_path(args, oid, "_neighbors.h5"))
 
 
 if __name__ == "__main__":
