@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """
 PCA module (scanpy-backed) for omnibenchmark.
-
 Output
 ------
 File: {output_dir}/{name}_embedding.tsv
-
 Tab-separated, with header row:
   cell_id  PC1  PC2  ...  PC{n_components}
-
 One row per cell; values are float64 PCA scores.
-
 Implementation notes
 --------------------
 - Genes are mean-centered (only) before PCA via sc.pp.pca(zero_center=True).
   No per-gene variance scaling — matches scrapper/rapids-singlecell. If
   alternative scaling is needed later, expose it as a new --pca_type variant
   rather than as an independent flag.
-
+- Code also adopted by Diana Stepushkina to expose various additional params
+  and then merged manuall by Mark to bring it into the code base for 
+  omni-scrna (2026-10-27) .. we should check that the rebased code in the 
+  meantime is still jiving well with Diana's code
 --solver randomized IS SILENTLY IGNORED (measured 2026-08-15)
+
 ------------------------------------------------------------
 This module always feeds sc.pp.pca a SPARSE matrix (load_matrix returns CSR),
 and sklearn's PCA accepts only {'arpack', 'covariance_eigh'} for sparse input.
@@ -69,11 +69,13 @@ FIX OPTIONS, in increasing order of work:
      here, so it adds a job, not information.
 """
 
+
 import argparse
 import os
 import sys
 from pathlib import Path
 
+from sklearn.decomposition import PCA
 import h5py
 import numpy as np
 import scipy.sparse as sp
@@ -118,6 +120,8 @@ def parse_args():
                    help="Number of principal components to compute")
     p.add_argument("--random_seed", type=int, required=True,
                    help="Seed for randomized solvers (and for reproducibility)")
+    p.add_argument("--n_iter", type=int, default=2)
+    p.add_argument("--n_oversamples", type=int, default=10)
     return p.parse_args()
 
 
@@ -155,20 +159,42 @@ def run_pca(adata, args):
         print(f"  blas threads limited to {limits} "
               f"(OMP_NUM_THREADS was {os.environ.get('OMP_NUM_THREADS', 'unset')})")
     with threadpool_limits(limits=limits):
-      sc.pp.pca(
-        adata,
-        n_comps=args.n_components,
-        zero_center=True,
-        svd_solver=args.solver if not chunked else None,
-        random_state=args.random_seed,
-        chunked=chunked,
-        chunk_size=args.chunk_size if chunked else None,
-      )
+      if args.solver == "randomized":
+        print(f"  n_iter: {args.n_iter}")
+        print(f"  n_oversamples: {args.n_oversamples}")
+        pca = PCA(
+            n_components=args.n_components,
+            svd_solver="randomized",
+            random_state=args.random_seed,
+            iterated_power=args.n_iter,
+            n_oversamples=args.n_oversamples,
+        )
 
-    embedding = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
-    loadings = np.asarray(adata.varm["PCs"], dtype=np.float64)
-    variance = np.asarray(adata.uns["pca"]["variance"], dtype=np.float64)
-    variance_ratio = np.asarray(adata.uns["pca"]["variance_ratio"], dtype=np.float64)
+        embedding = pca.fit_transform(adata.X)
+        loadings = pca.components_.T
+        variance = pca.explained_variance_
+        variance_ratio = pca.explained_variance_ratio_
+      else:
+        sc.pp.pca(
+            adata,
+            n_comps=args.n_components,
+            zero_center=True,
+            svd_solver=args.solver if not chunked else None,
+            random_state=args.random_seed,
+            chunked=chunked,
+            chunk_size=args.chunk_size if chunked else None,
+        )
+
+        embedding = np.asarray(adata.obsm["X_pca"], dtype=np.float64)
+        loadings = np.asarray(adata.varm["PCs"], dtype=np.float64)
+        variance = np.asarray(adata.uns["pca"]["variance"], dtype=np.float64)
+        variance_ratio = np.asarray(adata.uns["pca"]["variance_ratio"], dtype=np.float64)
+        
+    embedding = np.asarray(embedding, dtype=np.float64)
+    loadings = np.asarray(loadings, dtype=np.float64)
+    variance = np.asarray(variance, dtype=np.float64)
+    variance_ratio = np.asarray(variance_ratio, dtype=np.float64)
+
     return embedding, loadings, variance, variance_ratio
 
 
